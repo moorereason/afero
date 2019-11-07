@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 
-package afero
+package memmapfs
 
 import (
 	"fmt"
@@ -25,6 +25,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/basepathfs"
+	"github.com/spf13/afero/fsutil"
 )
 
 var testFS = new(MemMapFs)
@@ -36,7 +40,7 @@ func TestDirExists(t *testing.T) {
 	}
 
 	// First create a couple directories so there is something in the filesystem
-	//testFS := new(MemMapFs)
+	// testFS := new(MemMapFs)
 	testFS.MkdirAll("/foo/bar", 0777)
 
 	data := []test{
@@ -58,7 +62,7 @@ func TestDirExists(t *testing.T) {
 	}
 
 	for i, d := range data {
-		exists, _ := DirExists(testFS, filepath.FromSlash(d.input))
+		exists, _ := fsutil.DirExists(testFS, filepath.FromSlash(d.input))
 		if d.expected != exists {
 			t.Errorf("Test %d %q failed. Expected %t got %t", i, d.input, d.expected, exists)
 		}
@@ -81,7 +85,7 @@ func TestIsDir(t *testing.T) {
 
 	for i, d := range data {
 
-		exists, _ := IsDir(testFS, d.input)
+		exists, _ := fsutil.IsDir(testFS, d.input)
 		if d.expected != exists {
 			t.Errorf("Test %d failed. Expected %t got %t", i, d.expected, exists)
 		}
@@ -123,7 +127,7 @@ func TestIsEmpty(t *testing.T) {
 		{nonExistentDir, false, dirDoesNotExist},
 	}
 	for i, d := range data {
-		exists, err := IsEmpty(testFS, d.input)
+		exists, err := fsutil.IsEmpty(testFS, d.input)
 		if d.expectedResult != exists {
 			t.Errorf("Test %d %q failed exists. Expected result %t got %t", i, d.input, d.expectedResult, exists)
 		}
@@ -155,25 +159,26 @@ func TestReaderContains(t *testing.T) {
 		{"", nil, false},
 		{"", [][]byte{[]byte("a")}, false},
 		{"a", [][]byte{[]byte("")}, false},
-		{"", [][]byte{[]byte("")}, false}} {
-		result := readerContainsAny(strings.NewReader(this.v1), this.v2...)
+		{"", [][]byte{[]byte("")}, false},
+	} {
+		result := fsutil.ReaderContainsAny(strings.NewReader(this.v1), this.v2...)
 		if result != this.expect {
 			t.Errorf("[%d] readerContains: got %t but expected %t", i, result, this.expect)
 		}
 	}
 
-	if readerContainsAny(nil, []byte("a")) {
+	if fsutil.ReaderContainsAny(nil, []byte("a")) {
 		t.Error("readerContains with nil reader")
 	}
 
-	if readerContainsAny(nil, nil) {
+	if fsutil.ReaderContainsAny(nil, nil) {
 		t.Error("readerContains with nil arguments")
 	}
 }
 
-func createZeroSizedFileInTempDir() (File, error) {
+func createZeroSizedFileInTempDir() (afero.File, error) {
 	filePrefix := "_path_test_"
-	f, e := TempFile(testFS, "", filePrefix) // dir is os.TempDir()
+	f, e := fsutil.TempFile(testFS, "", filePrefix) // dir is os.TempDir()
 	if e != nil {
 		// if there was an error no file was created.
 		// => no requirement to delete the file
@@ -182,13 +187,13 @@ func createZeroSizedFileInTempDir() (File, error) {
 	return f, nil
 }
 
-func createNonZeroSizedFileInTempDir() (File, error) {
+func createNonZeroSizedFileInTempDir() (afero.File, error) {
 	f, err := createZeroSizedFileInTempDir()
 	if err != nil {
 		// no file ??
 	}
 	byteString := []byte("byteString")
-	err = WriteFile(testFS, f.Name(), byteString, 0644)
+	err = fsutil.WriteFile(testFS, f.Name(), byteString, 0644)
 	if err != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -197,7 +202,7 @@ func createNonZeroSizedFileInTempDir() (File, error) {
 	return f, nil
 }
 
-func deleteFileInTempDir(f File) {
+func deleteFileInTempDir(f afero.File) {
 	err := testFS.Remove(f.Name())
 	if err != nil {
 		// now what?
@@ -206,7 +211,7 @@ func deleteFileInTempDir(f File) {
 
 func createEmptyTempDir() (string, error) {
 	dirPrefix := "_dir_prefix_"
-	d, e := TempDir(testFS, "", dirPrefix) // will be in os.TempDir()
+	d, e := fsutil.TempDir(testFS, "", dirPrefix) // will be in os.TempDir()
 	if e != nil {
 		// no directory to delete - it was never created
 		return "", e
@@ -217,10 +222,10 @@ func createEmptyTempDir() (string, error) {
 func createTempDirWithZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		// now what?
 	}
 	filePrefix := "_path_test_"
-	_, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
+	_, fileErr := fsutil.TempFile(testFS, d, filePrefix) // dir is os.TempDir()
 	if fileErr != nil {
 		// if there was an error no file was created.
 		// but we need to remove the directory to clean-up
@@ -229,16 +234,15 @@ func createTempDirWithZeroLengthFiles() (string, error) {
 	}
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func createTempDirWithNonZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		// now what?
 	}
 	filePrefix := "_path_test_"
-	f, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
+	f, fileErr := fsutil.TempFile(testFS, d, filePrefix) // dir is os.TempDir()
 	if fileErr != nil {
 		// if there was an error no file was created.
 		// but we need to remove the directory to clean-up
@@ -246,7 +250,7 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 		return "", fileErr
 	}
 	byteString := []byte("byteString")
-	fileErr = WriteFile(testFS, f.Name(), byteString, 0644)
+	fileErr = fsutil.WriteFile(testFS, f.Name(), byteString, 0644)
 	if fileErr != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -257,7 +261,6 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func TestExists(t *testing.T) {
@@ -284,7 +287,7 @@ func TestExists(t *testing.T) {
 		{nonExistentDir, false, nil},
 	}
 	for i, d := range data {
-		exists, err := Exists(testFS, d.input)
+		exists, err := fsutil.Exists(testFS, d.input)
 		if d.expectedResult != exists {
 			t.Errorf("Test %d failed. Expected result %t got %t", i, d.expectedResult, exists)
 		}
@@ -292,7 +295,6 @@ func TestExists(t *testing.T) {
 			t.Errorf("Test %d failed. Expected %q got %q", i, d.expectedErr, err)
 		}
 	}
-
 }
 
 func TestSafeWriteToDisk(t *testing.T) {
@@ -319,7 +321,7 @@ func TestSafeWriteToDisk(t *testing.T) {
 	}
 
 	for i, d := range data {
-		e := SafeWriteReader(testFS, d.filename, reader)
+		e := fsutil.SafeWriteReader(testFS, d.filename, reader)
 		if d.expectedErr != nil {
 			if d.expectedErr.Error() != e.Error() {
 				t.Errorf("Test %d failed. Expected error %q but got %q", i, d.expectedErr.Error(), e.Error())
@@ -328,7 +330,7 @@ func TestSafeWriteToDisk(t *testing.T) {
 			if d.expectedErr != e {
 				t.Errorf("Test %d failed. Expected %q but got %q", i, d.expectedErr, e)
 			}
-			contents, _ := ReadFile(testFS, d.filename)
+			contents, _ := fsutil.ReadFile(testFS, d.filename)
 			if randomString != string(contents) {
 				t.Errorf("Test %d failed. Expected contents %q but got %q", i, randomString, string(contents))
 			}
@@ -359,11 +361,11 @@ func TestWriteToDisk(t *testing.T) {
 	}
 
 	for i, d := range data {
-		e := WriteReader(testFS, d.filename, reader)
+		e := fsutil.WriteReader(testFS, d.filename, reader)
 		if d.expectedErr != e {
 			t.Errorf("Test %d failed. WriteToDisk Error Expected %q but got %q", i, d.expectedErr, e)
 		}
-		contents, e := ReadFile(testFS, d.filename)
+		contents, e := fsutil.ReadFile(testFS, d.filename)
 		if e != nil {
 			t.Errorf("Test %d failed. Could not read file %s. Reason: %s\n", i, d.filename, e)
 		}
@@ -376,26 +378,26 @@ func TestWriteToDisk(t *testing.T) {
 
 func TestGetTempDir(t *testing.T) {
 	dir := os.TempDir()
-	if FilePathSeparator != dir[len(dir)-1:] {
-		dir = dir + FilePathSeparator
+	if fsutil.FilePathSeparator != dir[len(dir)-1:] {
+		dir = dir + fsutil.FilePathSeparator
 	}
-	testDir := "hugoTestFolder" + FilePathSeparator
+	testDir := "hugoTestFolder" + fsutil.FilePathSeparator
 	tests := []struct {
 		input    string
 		expected string
 	}{
 		{"", dir},
-		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + FilePathSeparator},
-		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + FilePathSeparator},
-		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + FilePathSeparator},
-		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + FilePathSeparator},
-		{testDir + "трям/трям", dir + testDir + "трям/трям" + FilePathSeparator},
-		{testDir + "은행", dir + testDir + "은행" + FilePathSeparator},
-		{testDir + "Банковский кассир", dir + testDir + "Банковский кассир" + FilePathSeparator},
+		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + fsutil.FilePathSeparator},
+		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + fsutil.FilePathSeparator},
+		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + fsutil.FilePathSeparator},
+		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + fsutil.FilePathSeparator},
+		{testDir + "трям/трям", dir + testDir + "трям/трям" + fsutil.FilePathSeparator},
+		{testDir + "은행", dir + testDir + "은행" + fsutil.FilePathSeparator},
+		{testDir + "Банковский кассир", dir + testDir + "Банковский кассир" + fsutil.FilePathSeparator},
 	}
 
 	for _, test := range tests {
-		output := GetTempDir(new(MemMapFs), test.input)
+		output := fsutil.GetTempDir(new(MemMapFs), test.input)
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}
@@ -423,12 +425,12 @@ func TestFullBaseFsPath(t *testing.T) {
 
 	for _, ds := range dirSpecs {
 		memFs := NewMemMapFs()
-		level1Fs := NewBasePathFs(memFs, ds.Dir1)
-		level2Fs := NewBasePathFs(level1Fs, ds.Dir2)
-		level3Fs := NewBasePathFs(level2Fs, ds.Dir3)
+		level1Fs := basepathfs.NewBasePathFs(memFs, ds.Dir1)
+		level2Fs := basepathfs.NewBasePathFs(level1Fs, ds.Dir2)
+		level3Fs := basepathfs.NewBasePathFs(level2Fs, ds.Dir3)
 
 		type spec struct {
-			BaseFs       Fs
+			BaseFs       afero.Fs
 			FileName     string
 			ExpectedPath string
 		}
@@ -442,7 +444,7 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath := FullBaseFsPath(s.BaseFs.(*BasePathFs), s.FileName); actualPath != s.ExpectedPath {
+			if actualPath := basepathfs.FullBaseFsPath(s.BaseFs.(*basepathfs.BasePathFs), s.FileName); actualPath != s.ExpectedPath {
 				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
 			}
 		}

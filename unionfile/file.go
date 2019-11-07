@@ -1,10 +1,10 @@
-package afero
+package unionfile
 
 import (
 	"io"
 	"os"
-	"path/filepath"
-	"syscall"
+
+	"github.com/spf13/afero"
 )
 
 // The UnionFile implements the afero.File interface and will be returned
@@ -21,8 +21,8 @@ import (
 // successful read in the overlay will move the cursor position in the base layer
 // by the number of bytes read.
 type UnionFile struct {
-	Base   File
-	Layer  File
+	Base   afero.File
+	Layer  afero.File
 	Merger DirsMerger
 	off    int
 	files  []os.FileInfo
@@ -38,7 +38,7 @@ func (f *UnionFile) Close() error {
 	if f.Layer != nil {
 		return f.Layer.Close()
 	}
-	return BADFD
+	return afero.BADFD
 }
 
 func (f *UnionFile) Read(s []byte) (int, error) {
@@ -58,7 +58,7 @@ func (f *UnionFile) Read(s []byte) (int, error) {
 	if f.Base != nil {
 		return f.Base.Read(s)
 	}
-	return 0, BADFD
+	return 0, afero.BADFD
 }
 
 func (f *UnionFile) ReadAt(s []byte, o int64) (int, error) {
@@ -72,7 +72,7 @@ func (f *UnionFile) ReadAt(s []byte, o int64) (int, error) {
 	if f.Base != nil {
 		return f.Base.ReadAt(s, o)
 	}
-	return 0, BADFD
+	return 0, afero.BADFD
 }
 
 func (f *UnionFile) Seek(o int64, w int) (pos int64, err error) {
@@ -86,7 +86,7 @@ func (f *UnionFile) Seek(o int64, w int) (pos int64, err error) {
 	if f.Base != nil {
 		return f.Base.Seek(o, w)
 	}
-	return 0, BADFD
+	return 0, afero.BADFD
 }
 
 func (f *UnionFile) Write(s []byte) (n int, err error) {
@@ -100,7 +100,7 @@ func (f *UnionFile) Write(s []byte) (n int, err error) {
 	if f.Base != nil {
 		return f.Base.Write(s)
 	}
-	return 0, BADFD
+	return 0, afero.BADFD
 }
 
 func (f *UnionFile) WriteAt(s []byte, o int64) (n int, err error) {
@@ -114,7 +114,7 @@ func (f *UnionFile) WriteAt(s []byte, o int64) (n int, err error) {
 	if f.Base != nil {
 		return f.Base.WriteAt(s, o)
 	}
-	return 0, BADFD
+	return 0, afero.BADFD
 }
 
 func (f *UnionFile) Name() string {
@@ -130,7 +130,7 @@ func (f *UnionFile) Name() string {
 type DirsMerger func(lofi, bofi []os.FileInfo) ([]os.FileInfo, error)
 
 var defaultUnionMergeDirsFn = func(lofi, bofi []os.FileInfo) ([]os.FileInfo, error) {
-	var files = make(map[string]os.FileInfo)
+	files := make(map[string]os.FileInfo)
 
 	for _, fi := range lofi {
 		files[fi.Name()] = fi
@@ -151,7 +151,6 @@ var defaultUnionMergeDirsFn = func(lofi, bofi []os.FileInfo) ([]os.FileInfo, err
 	}
 
 	return rfi, nil
-
 }
 
 // Readdir will weave the two directories together and
@@ -226,7 +225,7 @@ func (f *UnionFile) Stat() (os.FileInfo, error) {
 	if f.Base != nil {
 		return f.Base.Stat()
 	}
-	return nil, BADFD
+	return nil, afero.BADFD
 }
 
 func (f *UnionFile) Sync() (err error) {
@@ -240,7 +239,7 @@ func (f *UnionFile) Sync() (err error) {
 	if f.Base != nil {
 		return f.Base.Sync()
 	}
-	return BADFD
+	return afero.BADFD
 }
 
 func (f *UnionFile) Truncate(s int64) (err error) {
@@ -254,7 +253,7 @@ func (f *UnionFile) Truncate(s int64) (err error) {
 	if f.Base != nil {
 		return f.Base.Truncate(s)
 	}
-	return BADFD
+	return afero.BADFD
 }
 
 func (f *UnionFile) WriteString(s string) (n int, err error) {
@@ -268,53 +267,5 @@ func (f *UnionFile) WriteString(s string) (n int, err error) {
 	if f.Base != nil {
 		return f.Base.WriteString(s)
 	}
-	return 0, BADFD
-}
-
-func copyToLayer(base Fs, layer Fs, name string) error {
-	bfh, err := base.Open(name)
-	if err != nil {
-		return err
-	}
-	defer bfh.Close()
-
-	// First make sure the directory exists
-	exists, err := Exists(layer, filepath.Dir(name))
-	if err != nil {
-		return err
-	}
-	if !exists {
-		err = layer.MkdirAll(filepath.Dir(name), 0777) // FIXME?
-		if err != nil {
-			return err
-		}
-	}
-
-	// Create the file on the overlay
-	lfh, err := layer.Create(name)
-	if err != nil {
-		return err
-	}
-	n, err := io.Copy(lfh, bfh)
-	if err != nil {
-		// If anything fails, clean up the file
-		layer.Remove(name)
-		lfh.Close()
-		return err
-	}
-
-	bfi, err := bfh.Stat()
-	if err != nil || bfi.Size() != n {
-		layer.Remove(name)
-		lfh.Close()
-		return syscall.EIO
-	}
-
-	err = lfh.Close()
-	if err != nil {
-		layer.Remove(name)
-		lfh.Close()
-		return err
-	}
-	return layer.Chtimes(name, bfi.ModTime(), bfi.ModTime())
+	return 0, afero.BADFD
 }

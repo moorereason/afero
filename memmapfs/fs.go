@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package memmapfs
 
 import (
 	"fmt"
@@ -22,8 +22,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/afero/mem"
 )
+
+const FilePathSeparator = string(filepath.Separator)
 
 type MemMapFs struct {
 	mu   sync.RWMutex
@@ -31,7 +34,7 @@ type MemMapFs struct {
 	init sync.Once
 }
 
-func NewMemMapFs() Fs {
+func NewMemMapFs() afero.Fs {
 	return &MemMapFs{}
 }
 
@@ -47,7 +50,7 @@ func (m *MemMapFs) getData() map[string]*mem.FileData {
 
 func (*MemMapFs) Name() string { return "MemMapFS" }
 
-func (m *MemMapFs) Create(name string) (File, error) {
+func (m *MemMapFs) Create(name string) (afero.File, error) {
 	name = normalizePath(name)
 	m.mu.Lock()
 	file := mem.CreateFile(name)
@@ -92,12 +95,12 @@ func (m *MemMapFs) registerWithParent(f *mem.FileData) {
 		pdir := filepath.Dir(filepath.Clean(f.Name()))
 		err := m.lockfreeMkdir(pdir, 0777)
 		if err != nil {
-			//log.Println("Mkdir error:", err)
+			// log.Println("Mkdir error:", err)
 			return
 		}
 		parent, err = m.lockfreeOpen(pdir)
 		if err != nil {
-			//log.Println("Open after Mkdir error:", err)
+			// log.Println("Open after Mkdir error:", err)
 			return
 		}
 	}
@@ -115,7 +118,7 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 		// Only return ErrFileExists if it's a file, not a directory.
 		i := mem.FileInfo{FileData: x}
 		if !i.IsDir() {
-			return ErrFileExists
+			return afero.ErrFileExists
 		}
 	} else {
 		item := mem.CreateDir(name)
@@ -132,7 +135,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	_, ok := m.getData()[name]
 	m.mu.RUnlock()
 	if ok {
-		return &os.PathError{Op: "mkdir", Path: name, Err: ErrFileExists}
+		return &os.PathError{Op: "mkdir", Path: name, Err: afero.ErrFileExists}
 	}
 
 	m.mu.Lock()
@@ -149,7 +152,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
 	err := m.Mkdir(path, perm)
 	if err != nil {
-		if err.(*os.PathError).Err == ErrFileExists {
+		if err.(*os.PathError).Err == afero.ErrFileExists {
 			return nil
 		}
 		return err
@@ -171,7 +174,7 @@ func normalizePath(path string) string {
 	}
 }
 
-func (m *MemMapFs) Open(name string) (File, error) {
+func (m *MemMapFs) Open(name string) (afero.File, error) {
 	f, err := m.open(name)
 	if f != nil {
 		return mem.NewReadOnlyFileHandle(f), err
@@ -179,7 +182,7 @@ func (m *MemMapFs) Open(name string) (File, error) {
 	return nil, err
 }
 
-func (m *MemMapFs) openWrite(name string) (File, error) {
+func (m *MemMapFs) openWrite(name string) (afero.File, error) {
 	f, err := m.open(name)
 	if f != nil {
 		return mem.NewFileHandle(f), err
@@ -194,7 +197,7 @@ func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
 	if !ok {
-		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileNotFound}
+		return nil, &os.PathError{Op: "open", Path: name, Err: afero.ErrFileNotFound}
 	}
 	return f, nil
 }
@@ -205,11 +208,11 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 	if ok {
 		return f, nil
 	} else {
-		return nil, ErrFileNotFound
+		return nil, afero.ErrFileNotFound
 	}
 }
 
-func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	chmod := false
 	file, err := m.openWrite(name)
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
@@ -303,7 +306,7 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 		m.mu.Unlock()
 		m.mu.RLock()
 	} else {
-		return &os.PathError{Op: "rename", Path: oldname, Err: ErrFileNotFound}
+		return &os.PathError{Op: "rename", Path: oldname, Err: afero.ErrFileNotFound}
 	}
 	return nil
 }
@@ -324,7 +327,7 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
 	if !ok {
-		return &os.PathError{Op: "chmod", Path: name, Err: ErrFileNotFound}
+		return &os.PathError{Op: "chmod", Path: name, Err: afero.ErrFileNotFound}
 	}
 
 	m.mu.Lock()
@@ -341,7 +344,7 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
 	if !ok {
-		return &os.PathError{Op: "chtimes", Path: name, Err: ErrFileNotFound}
+		return &os.PathError{Op: "chtimes", Path: name, Err: afero.ErrFileNotFound}
 	}
 
 	m.mu.Lock()
@@ -358,7 +361,7 @@ func (m *MemMapFs) List() {
 	}
 }
 
-// func debugMemMapList(fs Fs) {
+// func debugMemMapList(fs afero.Fs) {
 // 	if x, ok := fs.(*MemMapFs); ok {
 // 		x.List()
 // 	}

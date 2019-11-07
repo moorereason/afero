@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package osfs
 
 import (
 	"os"
 	"time"
+
+	"github.com/spf13/afero"
 )
 
-var _ Lstater = (*OsFs)(nil)
+var _ afero.Lstater = (*OsFs)(nil)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -27,13 +29,13 @@ var _ Lstater = (*OsFs)(nil)
 // (http://golang.org/pkg/os/).
 type OsFs struct{}
 
-func NewOsFs() Fs {
+func NewOsFs() afero.Fs {
 	return &OsFs{}
 }
 
 func (OsFs) Name() string { return "OsFs" }
 
-func (OsFs) Create(name string) (File, error) {
+func (OsFs) Create(name string) (afero.File, error) {
 	f, e := os.Create(name)
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not
@@ -51,7 +53,7 @@ func (OsFs) MkdirAll(path string, perm os.FileMode) error {
 	return os.MkdirAll(path, perm)
 }
 
-func (OsFs) Open(name string) (File, error) {
+func (OsFs) Open(name string) (afero.File, error) {
 	f, e := os.Open(name)
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not
@@ -61,7 +63,7 @@ func (OsFs) Open(name string) (File, error) {
 	return f, e
 }
 
-func (OsFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (OsFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	f, e := os.OpenFile(name, flag, perm)
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not

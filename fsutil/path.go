@@ -13,18 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package fsutil
 
 import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/spf13/afero"
 )
 
 // readDirNames reads the directory named by dirname and returns
 // a sorted list of directory entries.
 // adapted from https://golang.org/src/path/filepath/path.go
-func readDirNames(fs Fs, dirname string) ([]string, error) {
+func ReadDirNames(fs afero.Fs, dirname string) ([]string, error) {
 	f, err := fs.Open(dirname)
 	if err != nil {
 		return nil, err
@@ -40,7 +42,7 @@ func readDirNames(fs Fs, dirname string) ([]string, error) {
 
 // walk recursively descends path, calling walkFn
 // adapted from https://golang.org/src/path/filepath/path.go
-func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error {
+func walk(fs afero.Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error {
 	err := walkFn(path, info, nil)
 	if err != nil {
 		if info.IsDir() && err == filepath.SkipDir {
@@ -53,14 +55,14 @@ func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error 
 		return nil
 	}
 
-	names, err := readDirNames(fs, path)
+	names, err := ReadDirNames(fs, path)
 	if err != nil {
 		return walkFn(path, info, err)
 	}
 
 	for _, name := range names {
 		filename := filepath.Join(path, name)
-		fileInfo, err := lstatIfPossible(fs, filename)
+		fileInfo, err := LstatIfPossible(fs, filename)
 		if err != nil {
 			if err := walkFn(filename, fileInfo, err); err != nil && err != filepath.SkipDir {
 				return err
@@ -78,8 +80,8 @@ func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error 
 }
 
 // if the filesystem supports it, use Lstat, else use fs.Stat
-func lstatIfPossible(fs Fs, path string) (os.FileInfo, error) {
-	if lfs, ok := fs.(Lstater); ok {
+func LstatIfPossible(fs afero.Fs, path string) (os.FileInfo, error) {
+	if lfs, ok := fs.(afero.Lstater); ok {
 		fi, _, err := lfs.LstatIfPossible(path)
 		return fi, err
 	}
@@ -92,13 +94,8 @@ func lstatIfPossible(fs Fs, path string) (os.FileInfo, error) {
 // order, which makes the output deterministic but means that for very
 // large directories Walk can be inefficient.
 // Walk does not follow symbolic links.
-
-func (a Afero) Walk(root string, walkFn filepath.WalkFunc) error {
-	return Walk(a.Fs, root, walkFn)
-}
-
-func Walk(fs Fs, root string, walkFn filepath.WalkFunc) error {
-	info, err := lstatIfPossible(fs, root)
+func Walk(fs afero.Fs, root string, walkFn filepath.WalkFunc) error {
+	info, err := LstatIfPossible(fs, root)
 	if err != nil {
 		return walkFn(root, nil, err)
 	}

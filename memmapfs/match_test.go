@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package memmapfs
 
 import (
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/osfs"
 )
 
 // contains returns true if vector contains the string s.
@@ -31,18 +35,18 @@ func contains(vector []string, s string) bool {
 	return false
 }
 
-func setupGlobDirRoot(t *testing.T, fs Fs) string {
+func setupGlobDirRoot(t *testing.T, fs afero.Fs) string {
 	path := testDir(fs)
 	setupGlobFiles(t, fs, path)
 	return path
 }
 
-func setupGlobDirReusePath(t *testing.T, fs Fs, path string) string {
+func setupGlobDirReusePath(t *testing.T, fs afero.Fs, path string) string {
 	testRegistry[fs] = append(testRegistry[fs], path)
 	return setupGlobFiles(t, fs, path)
 }
 
-func setupGlobFiles(t *testing.T, fs Fs, path string) string {
+func setupGlobFiles(t *testing.T, fs afero.Fs, path string) string {
 	testSubDir := filepath.Join(path, "globs", "bobs")
 	err := fs.MkdirAll(testSubDir, 0700)
 	if err != nil && !os.IsExist(err) {
@@ -84,7 +88,7 @@ func TestGlob(t *testing.T) {
 		}
 	}
 
-	var globTests = []struct {
+	globTests := []struct {
 		pattern, result string
 	}{
 		{testDir + "/globs/bobs/matcher", testDir + "/globs/bobs/matcher"},
@@ -102,7 +106,7 @@ func TestGlob(t *testing.T) {
 				pattern = filepath.Clean(pattern)
 				result = filepath.Clean(result)
 			}
-			matches, err := Glob(fs, pattern)
+			matches, err := fsutil.Glob(fs, pattern)
 			if err != nil {
 				t.Errorf("Glob error for %q: %s", pattern, err)
 				continue
@@ -112,7 +116,7 @@ func TestGlob(t *testing.T) {
 			}
 		}
 		for _, pattern := range []string{"no_match", "../*/no_match"} {
-			matches, err := Glob(fs, pattern)
+			matches, err := fsutil.Glob(fs, pattern)
 			if err != nil {
 				t.Errorf("Glob error for %q: %s", pattern, err)
 				continue
@@ -128,7 +132,7 @@ func TestGlob(t *testing.T) {
 func TestGlobSymlink(t *testing.T) {
 	defer removeAllTestFiles(t)
 
-	fs := &OsFs{}
+	fs := &osfs.OsFs{}
 	testDir := setupGlobDirRoot(t, fs)
 
 	err := os.Symlink("target", filepath.Join(testDir, "symlink"))
@@ -136,7 +140,7 @@ func TestGlobSymlink(t *testing.T) {
 		t.Skipf("skipping on %s", runtime.GOOS)
 	}
 
-	var globSymlinkTests = []struct {
+	globSymlinkTests := []struct {
 		path, dest string
 		brokenLink bool
 	}{
@@ -162,7 +166,7 @@ func TestGlobSymlink(t *testing.T) {
 			// Break the symlink.
 			fs.Remove(path)
 		}
-		matches, err := Glob(fs, dest)
+		matches, err := fsutil.Glob(fs, dest)
 		if err != nil {
 			t.Errorf("GlobSymlink error for %q: %s", dest, err)
 		}
@@ -172,10 +176,9 @@ func TestGlobSymlink(t *testing.T) {
 	}
 }
 
-
 func TestGlobError(t *testing.T) {
 	for _, fs := range Fss {
-		_, err := Glob(fs, "[7]")
+		_, err := fsutil.Glob(fs, "[7]")
 		if err != nil {
 			t.Error("expected error for bad pattern; got none")
 		}

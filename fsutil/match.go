@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package fsutil
 
 import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/spf13/afero"
 )
 
 // Glob returns the names of all files matching pattern or nil
@@ -31,10 +33,10 @@ import (
 //
 // This was adapted from (http://golang.org/pkg/path/filepath) and uses several
 // built-ins from that package.
-func Glob(fs Fs, pattern string) (matches []string, err error) {
+func Glob(fs afero.Fs, pattern string) (matches []string, err error) {
 	if !hasMeta(pattern) {
 		// Lstat not supported by a ll filesystems.
-		if _, err = lstatIfPossible(fs, pattern); err != nil {
+		if _, err = LstatIfPossible(fs, pattern); err != nil {
 			return nil, nil
 		}
 		return []string{pattern}, nil
@@ -72,7 +74,7 @@ func Glob(fs Fs, pattern string) (matches []string, err error) {
 // and appends them to matches. If the directory cannot be
 // opened, it returns the existing matches. New matches are
 // added in lexicographical order.
-func glob(fs Fs, dir, pattern string, matches []string) (m []string, e error) {
+func glob(fs afero.Fs, dir, pattern string, matches []string) (m []string, e error) {
 	m = matches
 	fi, err := fs.Stat(dir)
 	if err != nil {

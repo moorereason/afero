@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package memmapfs
 
 import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/spf13/afero/fsutil"
 )
 
 func TestWalk(t *testing.T) {
@@ -44,7 +46,7 @@ func TestWalk(t *testing.T) {
 			outputs[i] += fmt.Sprintln(path, info.Name(), size, info.IsDir(), err)
 			return nil
 		}
-		err := Walk(fs, testDir, walkFn)
+		err := fsutil.Walk(fs, testDir, walkFn)
 		if err != nil {
 			t.Error(err)
 		}

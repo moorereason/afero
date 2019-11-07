@@ -1,4 +1,4 @@
-package afero
+package cowfs
 
 import (
 	"fmt"
@@ -6,9 +6,14 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/internal/copyutil"
+	"github.com/spf13/afero/unionfile"
 )
 
-var _ Lstater = (*CopyOnWriteFs)(nil)
+var _ afero.Lstater = (*CopyOnWriteFs)(nil)
 
 // The CopyOnWriteFs is a union filesystem: a read only base file system with
 // a possibly writeable layer on top. Changes to the file system will only
@@ -18,11 +23,11 @@ var _ Lstater = (*CopyOnWriteFs)(nil)
 //
 // Reading directories is currently only supported via Open(), not OpenFile().
 type CopyOnWriteFs struct {
-	base  Fs
-	layer Fs
+	base  afero.Fs
+	layer afero.Fs
 }
 
-func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
+func NewCopyOnWriteFs(base afero.Fs, layer afero.Fs) afero.Fs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 
@@ -46,7 +51,7 @@ func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 }
 
 func (u *CopyOnWriteFs) copyToLayer(name string) error {
-	return copyToLayer(u.base, u.layer, name)
+	return copyutil.CopyToLayer(u.base, u.layer, name)
 }
 
 func (u *CopyOnWriteFs) Chtimes(name string, atime, mtime time.Time) error {
@@ -88,8 +93,8 @@ func (u *CopyOnWriteFs) Stat(name string) (os.FileInfo, error) {
 }
 
 func (u *CopyOnWriteFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
-	llayer, ok1 := u.layer.(Lstater)
-	lbase, ok2 := u.base.(Lstater)
+	llayer, ok1 := u.layer.(afero.Lstater)
+	lbase, ok2 := u.base.(afero.Lstater)
 
 	if ok1 {
 		fi, b, err := llayer.LstatIfPossible(name)
@@ -170,7 +175,7 @@ func (u *CopyOnWriteFs) RemoveAll(name string) error {
 	}
 }
 
-func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	b, err := u.isBaseFile(name)
 	if err != nil {
 		return nil, err
@@ -185,7 +190,7 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 		}
 
 		dir := filepath.Dir(name)
-		isaDir, err := IsDir(u.base, dir)
+		isaDir, err := fsutil.IsDir(u.base, dir)
 		if err != nil && !os.IsNotExist(err) {
 			return nil, err
 		}
@@ -196,7 +201,7 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 			return u.layer.OpenFile(name, flag, perm)
 		}
 
-		isaDir, err = IsDir(u.layer, dir)
+		isaDir, err = fsutil.IsDir(u.layer, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +221,7 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 // by the union which are the intersection of the following...
 //  layer: doesn't exist, exists as a file, and exists as a directory
 //  base:  doesn't exist, exists as a file, and exists as a directory
-func (u *CopyOnWriteFs) Open(name string) (File, error) {
+func (u *CopyOnWriteFs) Open(name string) (afero.File, error) {
 	// Since the overlay overrides the base we check that first
 	b, err := u.isBaseFile(name)
 	if err != nil {
@@ -229,7 +234,7 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 	}
 
 	// If overlay is a file, return it (base state irrelevant)
-	dir, err := IsDir(u.layer, name)
+	dir, err := fsutil.IsDir(u.layer, name)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +248,7 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 	// B. It's an accessible directory in the base (return a UnionFile)
 
 	// If base is file or nonreadable, return overlay
-	dir, err = IsDir(u.base, name)
+	dir, err = fsutil.IsDir(u.base, name)
 	if !dir || err != nil {
 		return u.layer.Open(name)
 	}
@@ -258,16 +263,16 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 		return nil, fmt.Errorf("BaseErr: %v\nOverlayErr: %v", bErr, lErr)
 	}
 
-	return &UnionFile{Base: bfile, Layer: lfile}, nil
+	return &unionfile.UnionFile{Base: bfile, Layer: lfile}, nil
 }
 
 func (u *CopyOnWriteFs) Mkdir(name string, perm os.FileMode) error {
-	dir, err := IsDir(u.base, name)
+	dir, err := fsutil.IsDir(u.base, name)
 	if err != nil {
 		return u.layer.MkdirAll(name, perm)
 	}
 	if dir {
-		return ErrFileExists
+		return afero.ErrFileExists
 	}
 	return u.layer.MkdirAll(name, perm)
 }
@@ -277,7 +282,7 @@ func (u *CopyOnWriteFs) Name() string {
 }
 
 func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
-	dir, err := IsDir(u.base, name)
+	dir, err := fsutil.IsDir(u.base, name)
 	if err != nil {
 		return u.layer.MkdirAll(name, perm)
 	}
@@ -288,6 +293,6 @@ func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
 	return u.layer.MkdirAll(name, perm)
 }
 
-func (u *CopyOnWriteFs) Create(name string) (File, error) {
+func (u *CopyOnWriteFs) Create(name string) (afero.File, error) {
 	return u.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 }

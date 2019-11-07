@@ -1,22 +1,28 @@
-package afero
+package memmapfs
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/cowfs"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/osfs"
+	"github.com/spf13/afero/readonlyfs"
 )
 
 func TestCopyOnWrite(t *testing.T) {
-	osFs := NewOsFs()
-	writeDir, err := TempDir(osFs, "", "copy-on-write-test")
+	osFs := osfs.NewOsFs()
+	writeDir, err := fsutil.TempDir(osFs, "", "copy-on-write-test")
 	if err != nil {
 		t.Fatal("error creating tempDir", err)
 	}
 	defer osFs.RemoveAll(writeDir)
 
-	compositeFs := NewCopyOnWriteFs(NewReadOnlyFs(NewOsFs()), osFs)
+	compositeFs := cowfs.NewCopyOnWriteFs(readonlyfs.NewReadOnlyFs(osfs.NewOsFs()), osFs)
 
-	var dir = filepath.Join(writeDir, "some/path")
+	dir := filepath.Join(writeDir, "some/path")
 
 	err = compositeFs.MkdirAll(dir, 0744)
 	if err != nil {
@@ -30,7 +36,7 @@ func TestCopyOnWrite(t *testing.T) {
 	// https://github.com/spf13/afero/issues/189
 	// We want the composite file system to behave like the OS file system
 	// on Mkdir and MkdirAll
-	for _, fs := range []Fs{osFs, compositeFs} {
+	for _, fs := range []afero.Fs{osFs, compositeFs} {
 		err = fs.Mkdir(dir, 0744)
 		if err == nil || !os.IsExist(err) {
 			t.Errorf("Mkdir: Got %q for %T", err, fs)
@@ -49,11 +55,11 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
 
-	if err := WriteFile(base, "base.txt", []byte("base"), 0755); err != nil {
+	if err := fsutil.WriteFile(base, "base.txt", []byte("base"), 0755); err != nil {
 		t.Fatalf("Failed to write file: %s", err)
 	}
 
-	ufs := NewCopyOnWriteFs(base, layer)
+	ufs := cowfs.NewCopyOnWriteFs(base, layer)
 
 	_, err := ufs.Stat("base.txt")
 	if err != nil {

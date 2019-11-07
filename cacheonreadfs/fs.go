@@ -1,9 +1,13 @@
-package afero
+package cacheonreadfs
 
 import (
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/internal/copyutil"
+	"github.com/spf13/afero/unionfile"
 )
 
 // If the cache duration is 0, cache time will be unlimited, i.e. once
@@ -20,12 +24,12 @@ import (
 // filter - Note: this will also make the overlay read-only, for writing files
 // in the overlay, use the overlay Fs directly, not via the union Fs.
 type CacheOnReadFs struct {
-	base      Fs
-	layer     Fs
+	base      afero.Fs
+	layer     afero.Fs
 	cacheTime time.Duration
 }
 
-func NewCacheOnReadFs(base Fs, layer Fs, cacheTime time.Duration) Fs {
+func NewCacheOnReadFs(base afero.Fs, layer afero.Fs, cacheTime time.Duration) afero.Fs {
 	return &CacheOnReadFs{base: base, layer: layer, cacheTime: cacheTime}
 }
 
@@ -72,7 +76,7 @@ func (u *CacheOnReadFs) cacheStatus(name string) (state cacheState, fi os.FileIn
 }
 
 func (u *CacheOnReadFs) copyToLayer(name string) error {
-	return copyToLayer(u.base, u.layer, name)
+	return copyutil.CopyToLayer(u.base, u.layer, name)
 }
 
 func (u *CacheOnReadFs) Chtimes(name string, atime, mtime time.Time) error {
@@ -183,7 +187,7 @@ func (u *CacheOnReadFs) RemoveAll(name string) error {
 	return u.layer.RemoveAll(name)
 }
 
-func (u *CacheOnReadFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (u *CacheOnReadFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return nil, err
@@ -205,12 +209,12 @@ func (u *CacheOnReadFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 			bfi.Close() // oops, what if O_TRUNC was set and file opening in the layer failed...?
 			return nil, err
 		}
-		return &UnionFile{Base: bfi, Layer: lfi}, nil
+		return &unionfile.UnionFile{Base: bfi, Layer: lfi}, nil
 	}
 	return u.layer.OpenFile(name, flag, perm)
 }
 
-func (u *CacheOnReadFs) Open(name string) (File, error) {
+func (u *CacheOnReadFs) Open(name string) (afero.File, error) {
 	st, fi, err := u.cacheStatus(name)
 	if err != nil {
 		return nil, err
@@ -251,7 +255,7 @@ func (u *CacheOnReadFs) Open(name string) (File, error) {
 	if err != nil && bfile == nil {
 		return nil, err
 	}
-	return &UnionFile{Base: bfile, Layer: lfile}, nil
+	return &unionfile.UnionFile{Base: bfile, Layer: lfile}, nil
 }
 
 func (u *CacheOnReadFs) Mkdir(name string, perm os.FileMode) error {
@@ -274,7 +278,7 @@ func (u *CacheOnReadFs) MkdirAll(name string, perm os.FileMode) error {
 	return u.layer.MkdirAll(name, perm)
 }
 
-func (u *CacheOnReadFs) Create(name string) (File, error) {
+func (u *CacheOnReadFs) Create(name string) (afero.File, error) {
 	bfh, err := u.base.Create(name)
 	if err != nil {
 		return nil, err
@@ -286,5 +290,5 @@ func (u *CacheOnReadFs) Create(name string) (File, error) {
 		bfh.Close()
 		return nil, err
 	}
-	return &UnionFile{Base: bfh, Layer: lfh}, nil
+	return &unionfile.UnionFile{Base: bfh, Layer: lfh}, nil
 }

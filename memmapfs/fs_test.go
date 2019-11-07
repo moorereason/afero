@@ -1,4 +1,4 @@
-package afero
+package memmapfs
 
 import (
 	"fmt"
@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/spf13/afero/fsutil"
 )
 
 func TestNormalizePath(t *testing.T) {
@@ -173,7 +175,7 @@ func TestMultipleOpenFiles(t *testing.T) {
 	defer removeAllTestFiles(t)
 	const fileName = "afero-demo2.txt"
 
-	var data = make([][]byte, len(Fss))
+	data := make([][]byte, len(Fss))
 
 	for i, fs := range Fss {
 		dir := testDir(fs)
@@ -217,7 +219,7 @@ func TestMultipleOpenFiles(t *testing.T) {
 			t.Error(err)
 		}
 		// the file now should contain "datadata"
-		data[i], err = ReadFile(fs, path)
+		data[i], err = fsutil.ReadFile(fs, path)
 		if err != nil {
 			t.Error(err)
 		}
@@ -366,7 +368,7 @@ func TestMemFsDataRace(t *testing.T) {
 		defer close(done)
 		for i := 0; i < n; i++ {
 			fname := filepath.Join(dir, fmt.Sprintf("%d.txt", i))
-			if err := WriteFile(fs, fname, []byte(""), 0777); err != nil {
+			if err := fsutil.WriteFile(fs, fname, []byte(""), 0777); err != nil {
 				panic(err)
 			}
 			if err := fs.Remove(fname); err != nil {
@@ -381,7 +383,7 @@ loop:
 		case <-done:
 			break loop
 		default:
-			_, err := ReadDir(fs, dir)
+			_, err := fsutil.ReadDir(fs, dir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -426,7 +428,7 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 
 	fs := NewMemMapFs()
 
-	if err := WriteFile(fs, "file.txt", []byte("abc"), 0777); err != nil {
+	if err := fsutil.WriteFile(fs, "file.txt", []byte("abc"), 0777); err != nil {
 		t.Fatal(err)
 	}
 

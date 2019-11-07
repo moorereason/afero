@@ -1,16 +1,21 @@
-package afero
+package memmapfs
 
 import (
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/basepathfs"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/osfs"
 )
 
 func TestBasePath(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
 
 	if _, err := bp.Create("/tmp/foo"); err != nil {
 		t.Errorf("Failed to set real path")
@@ -25,9 +30,9 @@ func TestBasePathRoot(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/foo/baz", 0777)
 	baseFs.MkdirAll("/base/path/boo/", 0777)
-	bp := NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
 
-	rd, err := ReadDir(bp, string(os.PathSeparator))
+	rd, err := fsutil.ReadDir(bp, string(os.PathSeparator))
 
 	if len(rd) != 2 {
 		t.Errorf("base path doesn't respect root")
@@ -39,24 +44,23 @@ func TestBasePathRoot(t *testing.T) {
 }
 
 func TestRealPath(t *testing.T) {
-	fs := NewOsFs()
-	baseDir, err := TempDir(fs, "", "base")
+	fs := osfs.NewOsFs()
+	baseDir, err := fsutil.TempDir(fs, "", "base")
 	if err != nil {
 		t.Fatal("error creating tempDir", err)
 	}
 	defer fs.RemoveAll(baseDir)
-	anotherDir, err := TempDir(fs, "", "another")
+	anotherDir, err := fsutil.TempDir(fs, "", "another")
 	if err != nil {
 		t.Fatal("error creating tempDir", err)
 	}
 	defer fs.RemoveAll(anotherDir)
 
-	bp := NewBasePathFs(fs, baseDir).(*BasePathFs)
+	bp := basepathfs.NewBasePathFs(fs, baseDir).(*basepathfs.BasePathFs)
 
 	subDir := filepath.Join(baseDir, "s1")
 
 	realPath, err := bp.RealPath("/s1")
-
 	if err != nil {
 		t.Errorf("Got error %s", err)
 	}
@@ -77,7 +81,6 @@ func TestRealPath(t *testing.T) {
 		// is not inside the base file system.
 		// The user will receive an os.ErrNotExist later.
 		surrealPath, err := bp.RealPath(anotherDir)
-
 		if err != nil {
 			t.Errorf("Got error %s", err)
 		}
@@ -88,7 +91,6 @@ func TestRealPath(t *testing.T) {
 			t.Errorf("Expected \n%s got \n%s", excpected, surrealPath)
 		}
 	}
-
 }
 
 func TestNestedBasePaths(t *testing.T) {
@@ -104,12 +106,12 @@ func TestNestedBasePaths(t *testing.T) {
 
 	for _, ds := range dirSpecs {
 		memFs := NewMemMapFs()
-		level1Fs := NewBasePathFs(memFs, ds.Dir1)
-		level2Fs := NewBasePathFs(level1Fs, ds.Dir2)
-		level3Fs := NewBasePathFs(level2Fs, ds.Dir3)
+		level1Fs := basepathfs.NewBasePathFs(memFs, ds.Dir1)
+		level2Fs := basepathfs.NewBasePathFs(level1Fs, ds.Dir2)
+		level3Fs := basepathfs.NewBasePathFs(level2Fs, ds.Dir3)
 
 		type spec struct {
-			BaseFs   Fs
+			BaseFs   afero.Fs
 			FileName string
 		}
 		specs := []spec{
@@ -144,7 +146,7 @@ func TestNestedBasePaths(t *testing.T) {
 func TestBasePathOpenFile(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
 	f, err := bp.OpenFile("/tmp/file.txt", os.O_CREATE, 0600)
 	if err != nil {
 		t.Fatalf("failed to open file: %v", err)
@@ -157,7 +159,7 @@ func TestBasePathOpenFile(t *testing.T) {
 func TestBasePathCreate(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
 	f, err := bp.Create("/tmp/file.txt")
 	if err != nil {
 		t.Fatalf("failed to create file: %v", err)
@@ -170,16 +172,16 @@ func TestBasePathCreate(t *testing.T) {
 func TestBasePathTempFile(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
 
-	tDir, err := TempDir(bp, "/tmp", "")
+	tDir, err := fsutil.TempDir(bp, "/tmp", "")
 	if err != nil {
 		t.Fatalf("Failed to TempDir: %v", err)
 	}
 	if filepath.Dir(tDir) != filepath.Clean("/tmp") {
 		t.Fatalf("Tempdir realpath leaked: %s", tDir)
 	}
-	tempFile, err := TempFile(bp, tDir, "")
+	tempFile, err := fsutil.TempFile(bp, tDir, "")
 	if err != nil {
 		t.Fatalf("Failed to TempFile: %v", err)
 	}

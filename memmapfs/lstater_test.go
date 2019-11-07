@@ -12,12 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package memmapfs
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/basepathfs"
+	"github.com/spf13/afero/cowfs"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/osfs"
+	"github.com/spf13/afero/readonlyfs"
 )
 
 func TestLstatIfPossible(t *testing.T) {
@@ -26,9 +33,9 @@ func TestLstatIfPossible(t *testing.T) {
 		os.Chdir(wd)
 	}()
 
-	osFs := &OsFs{}
+	osFs := &osfs.OsFs{}
 
-	workDir, err := TempDir(osFs, "", "afero-lstate")
+	workDir, err := fsutil.TempDir(osFs, "", "afero-lstate")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,18 +47,18 @@ func TestLstatIfPossible(t *testing.T) {
 	memWorkDir := "/lstate"
 
 	memFs := NewMemMapFs()
-	overlayFs1 := &CopyOnWriteFs{base: osFs, layer: memFs}
-	overlayFs2 := &CopyOnWriteFs{base: memFs, layer: osFs}
-	overlayFsMemOnly := &CopyOnWriteFs{base: memFs, layer: NewMemMapFs()}
-	basePathFs := &BasePathFs{source: osFs, path: workDir}
-	basePathFsMem := &BasePathFs{source: memFs, path: memWorkDir}
-	roFs := &ReadOnlyFs{source: osFs}
-	roFsMem := &ReadOnlyFs{source: memFs}
+	overlayFs1 := cowfs.NewCopyOnWriteFs(osFs, memFs).(*cowfs.CopyOnWriteFs) // XXX
+	overlayFs2 := cowfs.NewCopyOnWriteFs(memFs, osFs).(*cowfs.CopyOnWriteFs)
+	overlayFsMemOnly := cowfs.NewCopyOnWriteFs(memFs, NewMemMapFs()).(*cowfs.CopyOnWriteFs)
+	basePathFs := basepathfs.NewBasePathFs(osFs, workDir).(*basepathfs.BasePathFs)
+	basePathFsMem := basepathfs.NewBasePathFs(memFs, memWorkDir).(*basepathfs.BasePathFs)
+	roFs := readonlyfs.NewReadOnlyFs(osFs).(*readonlyfs.ReadOnlyFs)
+	roFsMem := readonlyfs.NewReadOnlyFs(memFs).(*readonlyfs.ReadOnlyFs)
 
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 
-	WriteFile(osFs, filepath.Join(workDir, "afero.txt"), []byte("Hi, Afero!"), 0777)
-	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0777)
+	fsutil.WriteFile(osFs, filepath.Join(workDir, "afero.txt"), []byte("Hi, Afero!"), 0777)
+	fsutil.WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0777)
 
 	os.Chdir(workDir)
 	if err := os.Symlink("afero.txt", "symafero.txt"); err != nil {
@@ -61,7 +68,7 @@ func TestLstatIfPossible(t *testing.T) {
 	pathFile := filepath.Join(workDir, "afero.txt")
 	pathSymlink := filepath.Join(workDir, "symafero.txt")
 
-	checkLstat := func(l Lstater, name string, shouldLstat bool) os.FileInfo {
+	checkLstat := func(l afero.Lstater, name string, shouldLstat bool) os.FileInfo {
 		statFile, isLstat, err := l.LstatIfPossible(name)
 		if err != nil {
 			t.Fatalf("Lstat check failed: %s", err)
@@ -72,7 +79,7 @@ func TestLstatIfPossible(t *testing.T) {
 		return statFile
 	}
 
-	testLstat := func(l Lstater, pathFile, pathSymlink string) {
+	testLstat := func(l afero.Lstater, pathFile, pathSymlink string) {
 		shouldLstat := pathSymlink != ""
 		statRegular := checkLstat(l, pathFile, shouldLstat)
 		statSymlink := checkLstat(l, pathSymlink, shouldLstat)

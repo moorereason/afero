@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package memmapfs
 
 import (
 	"bytes"
@@ -25,15 +25,19 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/fsutil"
+	"github.com/spf13/afero/osfs"
 )
 
 var testName = "test.txt"
-var Fss = []Fs{&MemMapFs{}, &OsFs{}}
+var Fss = []afero.Fs{&MemMapFs{}, &osfs.OsFs{}}
 
-var testRegistry map[Fs][]string = make(map[Fs][]string)
+var testRegistry map[afero.Fs][]string = make(map[afero.Fs][]string)
 
-func testDir(fs Fs) string {
-	name, err := TempDir(fs, "", "afero")
+func testDir(fs afero.Fs) string {
+	name, err := fsutil.TempDir(fs, "", "afero")
 	if err != nil {
 		panic(fmt.Sprint("unable to work with test dir", err))
 	}
@@ -42,9 +46,8 @@ func testDir(fs Fs) string {
 	return name
 }
 
-func tmpFile(fs Fs) File {
-	x, err := TempFile(fs, "", "afero")
-
+func tmpFile(fs afero.Fs) afero.File {
+	x, err := fsutil.TempFile(fs, "", "afero")
 	if err != nil {
 		panic(fmt.Sprint("unable to work with temp file", err))
 	}
@@ -54,7 +57,7 @@ func tmpFile(fs Fs) File {
 	return x
 }
 
-//Read with length 0 should not return EOF.
+// Read with length 0 should not return EOF.
 func TestRead0(t *testing.T) {
 	for _, fs := range Fss {
 		f := tmpFile(fs)
@@ -150,7 +153,7 @@ func TestCreate(t *testing.T) {
 			f.Close()
 			continue
 		}
-		buf, err := ReadAll(f)
+		buf, err := fsutil.ReadAll(f)
 		if err != nil {
 			t.Error(fs.Name(), "ReadAll failed:", err)
 			f.Close()
@@ -223,9 +226,9 @@ func TestRename(t *testing.T) {
 		if err != nil {
 			t.Errorf("%s: rename %q, %q failed: %v", fs.Name(), exists, from, err)
 		}
-		names, err := readDirNames(fs, tDir)
+		names, err := fsutil.ReadDirNames(fs, tDir)
 		if err != nil {
-			t.Errorf("%s: readDirNames error: %v", fs.Name(), err)
+			t.Errorf("%s: ReadDirNames error: %v", fs.Name(), err)
 		}
 		found := false
 		for _, e := range names {
@@ -250,7 +253,7 @@ func TestRename(t *testing.T) {
 func TestRemove(t *testing.T) {
 	for _, fs := range Fss {
 
-		x, err := TempFile(fs, "", "afero")
+		x, err := fsutil.TempFile(fs, "", "afero")
 		if err != nil {
 			t.Error(fmt.Sprint("unable to work with temp file", err))
 		}
@@ -332,7 +335,7 @@ func TestSeek(t *testing.T) {
 			whence int
 			out    int64
 		}
-		var tests = []test{
+		tests := []test{
 			{0, 1, int64(len(data))},
 			{0, 0, 0},
 			{5, 0, 5},
@@ -405,23 +408,23 @@ func TestWriteAt(t *testing.T) {
 	}
 }
 
-func setupTestDir(t *testing.T, fs Fs) string {
+func setupTestDir(t *testing.T, fs afero.Fs) string {
 	path := testDir(fs)
 	return setupTestFiles(t, fs, path)
 }
 
-func setupTestDirRoot(t *testing.T, fs Fs) string {
+func setupTestDirRoot(t *testing.T, fs afero.Fs) string {
 	path := testDir(fs)
 	setupTestFiles(t, fs, path)
 	return path
 }
 
-func setupTestDirReusePath(t *testing.T, fs Fs, path string) string {
+func setupTestDirReusePath(t *testing.T, fs afero.Fs, path string) string {
 	testRegistry[fs] = append(testRegistry[fs], path)
 	return setupTestFiles(t, fs, path)
 }
 
-func setupTestFiles(t *testing.T, fs Fs, path string) string {
+func setupTestFiles(t *testing.T, fs afero.Fs, path string) string {
 	testSubDir := filepath.Join(path, "more", "subdirectories", "for", "testing", "we")
 	err := fs.MkdirAll(testSubDir, 0700)
 	if err != nil && !os.IsExist(err) {
@@ -535,7 +538,7 @@ func TestReaddir(t *testing.T) {
 		infos := make([]string, len(Fss))
 		for i, fs := range Fss {
 			testSubDir := setupTestDir(t, fs)
-			//tDir := filepath.Dir(testSubDir)
+			// tDir := filepath.Dir(testSubDir)
 			root, err := fs.Open(testSubDir)
 			if err != nil {
 				t.Fatal(err)
@@ -615,7 +618,7 @@ func TestReaddirAll(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var namesRoot = []string{}
+		namesRoot := []string{}
 		for _, e := range rootInfo {
 			namesRoot = append(namesRoot, e.Name())
 		}
@@ -630,7 +633,7 @@ func TestReaddirAll(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var namesSub = []string{}
+		namesSub := []string{}
 		for _, e := range subInfo {
 			namesSub = append(namesSub, e.Name())
 		}
@@ -639,7 +642,7 @@ func TestReaddirAll(t *testing.T) {
 	}
 }
 
-func findNames(fs Fs, t *testing.T, tDir, testSubDir string, root, sub []string) {
+func findNames(fs afero.Fs, t *testing.T, tDir, testSubDir string, root, sub []string) {
 	var foundRoot bool
 	for _, e := range root {
 		f, err := fs.Open(filepath.Join(tDir, e))
@@ -694,7 +697,7 @@ func removeAllTestFiles(t *testing.T) {
 			}
 		}
 	}
-	testRegistry = make(map[Fs][]string)
+	testRegistry = make(map[afero.Fs][]string)
 }
 
 func equal(name1, name2 string) (r bool) {
@@ -707,7 +710,7 @@ func equal(name1, name2 string) (r bool) {
 	return
 }
 
-func checkSize(t *testing.T, f File, size int64) {
+func checkSize(t *testing.T, f afero.File, size int64) {
 	dir, err := f.Stat()
 	if err != nil {
 		t.Fatalf("Stat %q (looking for size %d): %s", f.Name(), size, err)

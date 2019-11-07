@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package httpfs
 
 import (
 	"errors"
@@ -21,14 +21,16 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/afero"
 )
 
-type httpDir struct {
+type Dir struct {
 	basePath string
-	fs       HttpFs
+	fs       Fs
 }
 
-func (d httpDir) Open(name string) (http.File, error) {
+func (d Dir) Open(name string) (http.File, error) {
 	if filepath.Separator != '/' && strings.IndexRune(name, filepath.Separator) >= 0 ||
 		strings.Contains(name, "\x00") {
 		return nil, errors.New("http: invalid character in file path")
@@ -45,41 +47,41 @@ func (d httpDir) Open(name string) (http.File, error) {
 	return f, nil
 }
 
-type HttpFs struct {
-	source Fs
+type Fs struct {
+	source afero.Fs
 }
 
-func NewHttpFs(source Fs) *HttpFs {
-	return &HttpFs{source: source}
+func New(source afero.Fs) *Fs {
+	return &Fs{source: source}
 }
 
-func (h HttpFs) Dir(s string) *httpDir {
-	return &httpDir{basePath: s, fs: h}
+func (h Fs) Dir(p string) *Dir {
+	return &Dir{basePath: p, fs: h}
 }
 
-func (h HttpFs) Name() string { return "h HttpFs" }
+func (h Fs) Name() string { return "httpfs" }
 
-func (h HttpFs) Create(name string) (File, error) {
+func (h Fs) Create(name string) (afero.File, error) {
 	return h.source.Create(name)
 }
 
-func (h HttpFs) Chmod(name string, mode os.FileMode) error {
+func (h Fs) Chmod(name string, mode os.FileMode) error {
 	return h.source.Chmod(name, mode)
 }
 
-func (h HttpFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+func (h Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return h.source.Chtimes(name, atime, mtime)
 }
 
-func (h HttpFs) Mkdir(name string, perm os.FileMode) error {
+func (h Fs) Mkdir(name string, perm os.FileMode) error {
 	return h.source.Mkdir(name, perm)
 }
 
-func (h HttpFs) MkdirAll(path string, perm os.FileMode) error {
+func (h Fs) MkdirAll(path string, perm os.FileMode) error {
 	return h.source.MkdirAll(path, perm)
 }
 
-func (h HttpFs) Open(name string) (http.File, error) {
+func (h Fs) Open(name string) (http.File, error) {
 	f, err := h.source.Open(name)
 	if err == nil {
 		if httpfile, ok := f.(http.File); ok {
@@ -89,22 +91,22 @@ func (h HttpFs) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func (h HttpFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (h Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	return h.source.OpenFile(name, flag, perm)
 }
 
-func (h HttpFs) Remove(name string) error {
+func (h Fs) Remove(name string) error {
 	return h.source.Remove(name)
 }
 
-func (h HttpFs) RemoveAll(path string) error {
+func (h Fs) RemoveAll(path string) error {
 	return h.source.RemoveAll(path)
 }
 
-func (h HttpFs) Rename(oldname, newname string) error {
+func (h Fs) Rename(oldname, newname string) error {
 	return h.source.Rename(oldname, newname)
 }
 
-func (h HttpFs) Stat(name string) (os.FileInfo, error) {
+func (h Fs) Stat(name string) (os.FileInfo, error) {
 	return h.source.Stat(name)
 }
