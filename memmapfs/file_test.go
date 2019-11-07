@@ -1,4 +1,4 @@
-package mem
+package memmapfs
 
 import (
 	"testing"
@@ -114,7 +114,7 @@ func TestFileDataIsDirRace(t *testing.T) {
 		s.Unlock()
 	}()
 
-	//just logging the value to trigger a read:
+	// just logging the value to trigger a read:
 	t.Logf("Value is %v", s.IsDir())
 }
 
@@ -143,10 +143,10 @@ func TestFileDataSizeRace(t *testing.T) {
 		s.Unlock()
 	}()
 
-	//just logging the value to trigger a read:
+	// just logging the value to trigger a read:
 	t.Logf("Value is %v", s.Size())
 
-	//Testing the Dir size case
+	// Testing the Dir size case
 	d.dir = true
 	if s.Size() != int64(42) {
 		t.Errorf("Failed to read correct value for dir, was %v", s.Size())

@@ -13,31 +13,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fsutil
+package memmapfs
 
-// func checkSizePath(t *testing.T, path string, size int64) {
-// 	dir, err := testFS.Stat(path)
-// 	if err != nil {
-// 		t.Fatalf("Stat %q (looking for size %d): %s", path, size, err)
-// 	}
-// 	if dir.Size() != size {
-// 		t.Errorf("Stat %q: size %d want %d", path, dir.Size(), size)
-// 	}
-// }
-//
+import (
+	"testing"
+)
+
+func checkSizePath(t *testing.T, path string, size int64) {
+	dir, err := testFS.Stat(path)
+	if err != nil {
+		t.Fatalf("Stat %q (looking for size %d): %s", path, size, err)
+	}
+	if dir.Size() != size {
+		t.Errorf("Stat %q: size %d want %d", path, dir.Size(), size)
+	}
+}
+
+// XXX: These tests were for the methods on the global Afero type, which is
+// planned to be removed in v2.
+
 // func TestReadFile(t *testing.T) {
 // 	testFS = &MemMapFs{}
-// 	fsutil := &Afero{Fs: testFS}
+// 	fs := &afero.Afero{Fs: testFS}
 //
 // 	testFS.Create("this_exists.go")
 // 	filename := "rumpelstilzchen"
-// 	contents, err := fsutil.ReadFile(filename)
+// 	contents, err := fs.ReadFile(filename)
 // 	if err == nil {
 // 		t.Fatalf("ReadFile %s: error expected, none found", filename)
 // 	}
 //
 // 	filename = "this_exists.go"
-// 	contents, err = fsutil.ReadFile(filename)
+// 	contents, err = fs.ReadFile(filename)
 // 	if err != nil {
 // 		t.Fatalf("ReadFile %s: %v", filename, err)
 // 	}
@@ -47,8 +54,8 @@ package fsutil
 //
 // func TestWriteFile(t *testing.T) {
 // 	testFS = &MemMapFs{}
-// 	fsutil := &Afero{Fs: testFS}
-// 	f, err := fsutil.TempFile("", "ioutil-test")
+// 	fs := &afero.Afero{Fs: testFS}
+// 	f, err := fs.TempFile("", "ioutil-test")
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -57,11 +64,11 @@ package fsutil
 // 		"build bigger and better idiot-proof programs, and the Universe trying " +
 // 		"to produce bigger and better idiots. So far, the Universe is winning."
 //
-// 	if err := fsutil.WriteFile(filename, []byte(data), 0644); err != nil {
+// 	if err := fs.WriteFile(filename, []byte(data), 0644); err != nil {
 // 		t.Fatalf("WriteFile %s: %v", filename, err)
 // 	}
 //
-// 	contents, err := fsutil.ReadFile(filename)
+// 	contents, err := fs.ReadFile(filename)
 // 	if err != nil {
 // 		t.Fatalf("ReadFile %s: %v", filename, err)
 // 	}
@@ -80,13 +87,13 @@ package fsutil
 // 	testFS.Mkdir("/i-am-a-dir", 0777)
 // 	testFS.Create("/this_exists.go")
 // 	dirname := "rumpelstilzchen"
-// 	_, err := ReadDir(testFS, dirname)
+// 	_, err := fsutil.ReadDir(testFS, dirname)
 // 	if err == nil {
 // 		t.Fatalf("ReadDir %s: error expected, none found", dirname)
 // 	}
 //
 // 	dirname = ".."
-// 	list, err := ReadDir(testFS, dirname)
+// 	list, err := fsutil.ReadDir(testFS, dirname)
 // 	if err != nil {
 // 		t.Fatalf("ReadDir %s: %v", dirname, err)
 // 	}

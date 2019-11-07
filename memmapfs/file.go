@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mem
+package memmapfs
 
 import (
 	"bytes"
@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 )
-
-const FilePathSeparator = string(filepath.Separator)
 
 type File struct {
 	// atomic requires 64-bit alignment for struct field access
