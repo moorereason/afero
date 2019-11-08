@@ -33,7 +33,7 @@ type MemMapFs struct {
 	init sync.Once
 }
 
-func NewMemMapFs() afero.Fs {
+func NewMemMapFs() *MemMapFs {
 	return &MemMapFs{}
 }
 

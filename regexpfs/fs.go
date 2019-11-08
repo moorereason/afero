@@ -19,7 +19,7 @@ type Fs struct {
 	source afero.Fs
 }
 
-func New(source afero.Fs, re *regexp.Regexp) afero.Fs {
+func New(source afero.Fs, re *regexp.Regexp) *Fs {
 	return &Fs{source: source, re: re}
 }
 

@@ -27,7 +27,7 @@ type CopyOnWriteFs struct {
 	layer afero.Fs
 }
 
-func NewCopyOnWriteFs(base afero.Fs, layer afero.Fs) afero.Fs {
+func NewCopyOnWriteFs(base afero.Fs, layer afero.Fs) *CopyOnWriteFs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 

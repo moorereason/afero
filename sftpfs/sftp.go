@@ -29,7 +29,7 @@ type Fs struct {
 	client *sftp.Client
 }
 
-func New(client *sftp.Client) afero.Fs {
+func New(client *sftp.Client) *Fs {
 	return &Fs{client: client}
 }
 

@@ -29,7 +29,7 @@ var _ afero.Lstater = (*OsFs)(nil)
 // (http://golang.org/pkg/os/).
 type OsFs struct{}
 
-func NewOsFs() afero.Fs {
+func NewOsFs() *OsFs {
 	return &OsFs{}
 }
 

@@ -47,13 +47,13 @@ func TestLstatIfPossible(t *testing.T) {
 	memWorkDir := "/lstate"
 
 	memFs := NewMemMapFs()
-	overlayFs1 := cowfs.NewCopyOnWriteFs(osFs, memFs).(*cowfs.CopyOnWriteFs) // XXX
-	overlayFs2 := cowfs.NewCopyOnWriteFs(memFs, osFs).(*cowfs.CopyOnWriteFs)
-	overlayFsMemOnly := cowfs.NewCopyOnWriteFs(memFs, NewMemMapFs()).(*cowfs.CopyOnWriteFs)
-	basePathFs := basepathfs.NewBasePathFs(osFs, workDir).(*basepathfs.BasePathFs)
-	basePathFsMem := basepathfs.NewBasePathFs(memFs, memWorkDir).(*basepathfs.BasePathFs)
-	roFs := readonlyfs.NewReadOnlyFs(osFs).(*readonlyfs.ReadOnlyFs)
-	roFsMem := readonlyfs.NewReadOnlyFs(memFs).(*readonlyfs.ReadOnlyFs)
+	overlayFs1 := cowfs.NewCopyOnWriteFs(osFs, memFs)
+	overlayFs2 := cowfs.NewCopyOnWriteFs(memFs, osFs)
+	overlayFsMemOnly := cowfs.NewCopyOnWriteFs(memFs, NewMemMapFs())
+	basePathFs := basepathfs.NewBasePathFs(osFs, workDir)
+	basePathFsMem := basepathfs.NewBasePathFs(memFs, memWorkDir)
+	roFs := readonlyfs.NewReadOnlyFs(osFs)
+	roFsMem := readonlyfs.NewReadOnlyFs(memFs)
 
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 

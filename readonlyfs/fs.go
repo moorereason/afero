@@ -15,7 +15,7 @@ type ReadOnlyFs struct {
 	source afero.Fs
 }
 
-func NewReadOnlyFs(source afero.Fs) afero.Fs {
+func NewReadOnlyFs(source afero.Fs) *ReadOnlyFs {
 	return &ReadOnlyFs{source: source}
 }
 

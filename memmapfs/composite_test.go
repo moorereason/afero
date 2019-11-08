@@ -20,7 +20,7 @@ import (
 
 var tempDirs []string
 
-func NewTempOsBaseFs(t *testing.T) afero.Fs {
+func NewTempOsBaseFs(t *testing.T) *basepathfs.BasePathFs {
 	name, err := fsutil.TempDir(osfs.NewOsFs(), "", "")
 	if err != nil {
 		t.Error("error creating tempDir", err)

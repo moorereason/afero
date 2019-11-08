@@ -35,7 +35,7 @@ func (f *BasePathFile) Name() string {
 	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
 }
 
-func NewBasePathFs(source afero.Fs, path string) afero.Fs {
+func NewBasePathFs(source afero.Fs, path string) *BasePathFs {
 	return &BasePathFs{source: source, path: path}
 }
 

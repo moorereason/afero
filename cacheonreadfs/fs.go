@@ -29,7 +29,7 @@ type CacheOnReadFs struct {
 	cacheTime time.Duration
 }
 
-func NewCacheOnReadFs(base afero.Fs, layer afero.Fs, cacheTime time.Duration) afero.Fs {
+func NewCacheOnReadFs(base afero.Fs, layer afero.Fs, cacheTime time.Duration) *CacheOnReadFs {
 	return &CacheOnReadFs{base: base, layer: layer, cacheTime: cacheTime}
 }
 
