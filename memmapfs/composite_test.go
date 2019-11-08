@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/afero/cowfs"
 	"github.com/spf13/afero/fsutil"
 	"github.com/spf13/afero/osfs"
-	"github.com/spf13/afero/readonlyfs"
+	"github.com/spf13/afero/rofs"
 )
 
 var tempDirs []string
@@ -59,7 +59,7 @@ func CleanupTempDirs(t *testing.T) {
 
 func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	ufs := cowfs.NewCopyOnWriteFs(roBase, &MemMapFs{})
 
 	base.MkdirAll("/home/test", 0777)
@@ -107,7 +107,7 @@ func TestUnionCreateExisting(t *testing.T) {
 
 func TestUnionMergeReaddir(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, &MemMapFs{})
 
@@ -132,7 +132,7 @@ func TestUnionMergeReaddir(t *testing.T) {
 
 func TestExistingDirectoryCollisionReaddir(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	overlay := &MemMapFs{}
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
@@ -172,7 +172,7 @@ func TestExistingDirectoryCollisionReaddir(t *testing.T) {
 
 func TestNestedDirBaseReaddir(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	overlay := &MemMapFs{}
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
@@ -207,7 +207,7 @@ func TestNestedDirBaseReaddir(t *testing.T) {
 
 func TestNestedDirOverlayReaddir(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	overlay := &MemMapFs{}
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
@@ -241,7 +241,7 @@ func TestNestedDirOverlayReaddir(t *testing.T) {
 func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 	defer CleanupTempDirs(t)
 	base := NewTempOsBaseFs(t)
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	overlay := NewTempOsBaseFs(t)
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
@@ -276,7 +276,7 @@ func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 func TestCopyOnWriteFsWithOsFs(t *testing.T) {
 	defer CleanupTempDirs(t)
 	base := NewTempOsBaseFs(t)
-	roBase := readonlyfs.NewReadOnlyFs(base)
+	roBase := rofs.NewReadOnlyFs(base)
 	overlay := NewTempOsBaseFs(t)
 
 	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)

@@ -3,12 +3,12 @@ package memmapfs
 import (
 	"testing"
 
-	"github.com/spf13/afero/readonlyfs"
+	"github.com/spf13/afero/rofs"
 )
 
 func TestFilterReadOnly(t *testing.T) {
 	mfs := &MemMapFs{}
-	fs := readonlyfs.NewReadOnlyFs(mfs)
+	fs := rofs.NewReadOnlyFs(mfs)
 	_, err := fs.Create("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to create file")
@@ -22,7 +22,7 @@ func TestFilterReadonlyRemoveAndRead(t *testing.T) {
 	fh.Write([]byte("content here"))
 	fh.Close()
 
-	fs := readonlyfs.NewReadOnlyFs(mfs)
+	fs := rofs.NewReadOnlyFs(mfs)
 	err = fs.Remove("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to remove file")

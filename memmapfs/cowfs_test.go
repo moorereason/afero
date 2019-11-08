@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/afero/cowfs"
 	"github.com/spf13/afero/fsutil"
 	"github.com/spf13/afero/osfs"
-	"github.com/spf13/afero/readonlyfs"
+	"github.com/spf13/afero/rofs"
 )
 
 func TestCopyOnWrite(t *testing.T) {
@@ -20,7 +20,7 @@ func TestCopyOnWrite(t *testing.T) {
 	}
 	defer osFs.RemoveAll(writeDir)
 
-	compositeFs := cowfs.NewCopyOnWriteFs(readonlyfs.NewReadOnlyFs(osfs.NewOsFs()), osFs)
+	compositeFs := cowfs.NewCopyOnWriteFs(rofs.NewReadOnlyFs(osfs.NewOsFs()), osFs)
 
 	dir := filepath.Join(writeDir, "some/path")
 

@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/afero/cowfs"
 	"github.com/spf13/afero/fsutil"
 	"github.com/spf13/afero/osfs"
-	"github.com/spf13/afero/readonlyfs"
+	"github.com/spf13/afero/rofs"
 )
 
 func TestLstatIfPossible(t *testing.T) {
@@ -52,8 +52,8 @@ func TestLstatIfPossible(t *testing.T) {
 	overlayFsMemOnly := cowfs.NewCopyOnWriteFs(memFs, NewMemMapFs())
 	basePathFs := basepathfs.NewBasePathFs(osFs, workDir)
 	basePathFsMem := basepathfs.NewBasePathFs(memFs, memWorkDir)
-	roFs := readonlyfs.NewReadOnlyFs(osFs)
-	roFsMem := readonlyfs.NewReadOnlyFs(memFs)
+	roFs := rofs.NewReadOnlyFs(osFs)
+	roFsMem := rofs.NewReadOnlyFs(memFs)
 
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 

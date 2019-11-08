@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/afero/fsutil"
 	"github.com/spf13/afero/memmapfs"
-	"github.com/spf13/afero/readonlyfs"
+	"github.com/spf13/afero/rofs"
 )
 
 func TestFilter(t *testing.T) {
@@ -18,7 +18,7 @@ func TestFilter(t *testing.T) {
 }
 
 func TestFilterROChain(t *testing.T) {
-	rofs := readonlyfs.NewReadOnlyFs(&memmapfs.MemMapFs{})
+	rofs := rofs.NewReadOnlyFs(&memmapfs.MemMapFs{})
 	fs := &Fs{re: regexp.MustCompile(`\.txt$`), source: rofs}
 	_, err := fs.Create("/file.txt")
 	if err == nil {

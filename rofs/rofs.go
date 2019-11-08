@@ -1,4 +1,4 @@
-package readonlyfs
+package rofs
 
 import (
 	"os"
