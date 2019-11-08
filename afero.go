@@ -29,12 +29,15 @@ import (
 	"time"
 )
 
+var ErrOutOfRange = errors.New("Out of range")
+
 // File represents a file in the filesystem.
 type File interface {
 	io.Closer
 	io.Reader
 	io.ReaderAt
 	io.Seeker
+	io.StringWriter
 	io.Writer
 	io.WriterAt
 
@@ -44,16 +47,24 @@ type File interface {
 	Stat() (os.FileInfo, error)
 	Sync() error
 	Truncate(size int64) error
-	WriteString(s string) (ret int, err error)
 }
 
 // Fs is the filesystem interface.
 //
 // Any simulated or real filesystem should implement this interface.
 type Fs interface {
+	// Chmod changes the mode of the named file to mode.
+	Chmod(name string, mode os.FileMode) error
+
+	// Chtimes changes the access and modification times of the named file
+	Chtimes(name string, atime time.Time, mtime time.Time) error
+
 	// Create creates a file in the filesystem, returning the file and an
 	// error, if any happens.
 	Create(name string) (File, error)
+
+	// The name of this FileSystem
+	Name() string
 
 	// Mkdir creates a directory in the filesystem, return an error if any
 	// happens.
@@ -83,15 +94,13 @@ type Fs interface {
 	// Stat returns a FileInfo describing the named file, or an error, if any
 	// happens.
 	Stat(name string) (os.FileInfo, error)
-
-	// The name of this FileSystem
-	Name() string
-
-	// Chmod changes the mode of the named file to mode.
-	Chmod(name string, mode os.FileMode) error
-
-	// Chtimes changes the access and modification times of the named file
-	Chtimes(name string, atime time.Time, mtime time.Time) error
 }
 
-var ErrOutOfRange = errors.New("Out of range")
+// Lstater is an optional interface in Afero. It is only implemented by the
+// filesystems saying so.
+// It will call Lstat if the filesystem iself is, or it delegates to, the os filesystem.
+// Else it will call Stat.
+// In addition to the FileInfo, it will return a boolean telling whether Lstat was called or not.
+type Lstater interface {
+	LstatIfPossible(name string) (os.FileInfo, bool, error)
+}
