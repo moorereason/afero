@@ -32,7 +32,7 @@ import (
 )
 
 var testName = "test.txt"
-var Fss = []afero.Fs{&MemMapFs{}, &osfs.OsFs{}}
+var Fss = []afero.Fs{&Fs{}, &osfs.OsFs{}}
 
 var testRegistry map[afero.Fs][]string = make(map[afero.Fs][]string)
 
@@ -169,7 +169,7 @@ func TestCreate(t *testing.T) {
 }
 
 func TestMemFileRead(t *testing.T) {
-	f := tmpFile(new(MemMapFs))
+	f := tmpFile(new(Fs))
 	// f := MemFileCreate("testfile")
 	f.WriteString("abcd")
 	f.Seek(0, 0)

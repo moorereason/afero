@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/afero"
 )
 
-var _ afero.Lstater = (*BasePathFs)(nil)
+var _ afero.Lstater = (*Fs)(nil)
 
-// The BasePathFs restricts all operations to a given path within an Fs.
+// The Fs restricts all operations to a given path within an Fs.
 // The given file name to the operations on this Fs will be prepended with
 // the base path before calling the base Fs.
 // Any file name (after filepath.Clean()) outside this base path will be
@@ -20,7 +20,7 @@ var _ afero.Lstater = (*BasePathFs)(nil)
 //
 // Note that it does not clean the error messages on return, so you may
 // reveal the real path on errors.
-type BasePathFs struct {
+type Fs struct {
 	source afero.Fs
 	path   string
 }
@@ -35,13 +35,13 @@ func (f *BasePathFile) Name() string {
 	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
 }
 
-func NewBasePathFs(source afero.Fs, path string) *BasePathFs {
-	return &BasePathFs{source: source, path: path}
+func New(source afero.Fs, path string) *Fs {
+	return &Fs{source: source, path: path}
 }
 
 // on a file outside the base path it returns the given file name and an error,
 // else the given file with the base path prepended
-func (b *BasePathFs) RealPath(name string) (path string, err error) {
+func (b *Fs) RealPath(name string) (path string, err error) {
 	if err := validateBasePathName(name); err != nil {
 		return name, err
 	}
@@ -71,32 +71,32 @@ func validateBasePathName(name string) error {
 	return nil
 }
 
-func (b *BasePathFs) Chtimes(name string, atime, mtime time.Time) (err error) {
+func (b *Fs) Chtimes(name string, atime, mtime time.Time) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "chtimes", Path: name, Err: err}
 	}
 	return b.source.Chtimes(name, atime, mtime)
 }
 
-func (b *BasePathFs) Chmod(name string, mode os.FileMode) (err error) {
+func (b *Fs) Chmod(name string, mode os.FileMode) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "chmod", Path: name, Err: err}
 	}
 	return b.source.Chmod(name, mode)
 }
 
-func (b *BasePathFs) Name() string {
+func (b *Fs) Name() string {
 	return "BasePathFs"
 }
 
-func (b *BasePathFs) Stat(name string) (fi os.FileInfo, err error) {
+func (b *Fs) Stat(name string) (fi os.FileInfo, err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: err}
 	}
 	return b.source.Stat(name)
 }
 
-func (b *BasePathFs) Rename(oldname, newname string) (err error) {
+func (b *Fs) Rename(oldname, newname string) (err error) {
 	if oldname, err = b.RealPath(oldname); err != nil {
 		return &os.PathError{Op: "rename", Path: oldname, Err: err}
 	}
@@ -106,21 +106,21 @@ func (b *BasePathFs) Rename(oldname, newname string) (err error) {
 	return b.source.Rename(oldname, newname)
 }
 
-func (b *BasePathFs) RemoveAll(name string) (err error) {
+func (b *Fs) RemoveAll(name string) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "remove_all", Path: name, Err: err}
 	}
 	return b.source.RemoveAll(name)
 }
 
-func (b *BasePathFs) Remove(name string) (err error) {
+func (b *Fs) Remove(name string) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "remove", Path: name, Err: err}
 	}
 	return b.source.Remove(name)
 }
 
-func (b *BasePathFs) OpenFile(name string, flag int, mode os.FileMode) (f afero.File, err error) {
+func (b *Fs) OpenFile(name string, flag int, mode os.FileMode) (f afero.File, err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{Op: "openfile", Path: name, Err: err}
 	}
@@ -131,7 +131,7 @@ func (b *BasePathFs) OpenFile(name string, flag int, mode os.FileMode) (f afero.
 	return &BasePathFile{sourcef, b.path}, nil
 }
 
-func (b *BasePathFs) Open(name string) (f afero.File, err error) {
+func (b *Fs) Open(name string) (f afero.File, err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{Op: "open", Path: name, Err: err}
 	}
@@ -142,21 +142,21 @@ func (b *BasePathFs) Open(name string) (f afero.File, err error) {
 	return &BasePathFile{File: sourcef, path: b.path}, nil
 }
 
-func (b *BasePathFs) Mkdir(name string, mode os.FileMode) (err error) {
+func (b *Fs) Mkdir(name string, mode os.FileMode) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}
 	}
 	return b.source.Mkdir(name, mode)
 }
 
-func (b *BasePathFs) MkdirAll(name string, mode os.FileMode) (err error) {
+func (b *Fs) MkdirAll(name string, mode os.FileMode) (err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}
 	}
 	return b.source.MkdirAll(name, mode)
 }
 
-func (b *BasePathFs) Create(name string) (f afero.File, err error) {
+func (b *Fs) Create(name string) (f afero.File, err error) {
 	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{Op: "create", Path: name, Err: err}
 	}
@@ -167,7 +167,7 @@ func (b *BasePathFs) Create(name string) (f afero.File, err error) {
 	return &BasePathFile{File: sourcef, path: b.path}, nil
 }
 
-func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
+func (b *Fs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	name, err := b.RealPath(name)
 	if err != nil {
 		return nil, false, &os.PathError{Op: "lstat", Path: name, Err: err}
@@ -179,9 +179,9 @@ func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, false, err
 }
 
-func FullBaseFsPath(basePathFs *BasePathFs, relativePath string) string {
+func FullBaseFsPath(basePathFs *Fs, relativePath string) string {
 	combinedPath := filepath.Join(basePathFs.path, relativePath)
-	if parent, ok := basePathFs.source.(*BasePathFs); ok {
+	if parent, ok := basePathFs.source.(*Fs); ok {
 		return FullBaseFsPath(parent, combinedPath)
 	}
 

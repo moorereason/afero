@@ -10,7 +10,7 @@ import (
 )
 
 func TestFilter(t *testing.T) {
-	fs := New(&memmapfs.MemMapFs{}, regexp.MustCompile(`\.txt$`))
+	fs := New(&memmapfs.Fs{}, regexp.MustCompile(`\.txt$`))
 	_, err := fs.Create("/file.html")
 	if err == nil {
 		t.Errorf("Did not fail to create file")
@@ -18,7 +18,7 @@ func TestFilter(t *testing.T) {
 }
 
 func TestFilterROChain(t *testing.T) {
-	rofs := rofs.NewReadOnlyFs(&memmapfs.MemMapFs{})
+	rofs := rofs.New(&memmapfs.Fs{})
 	fs := &Fs{re: regexp.MustCompile(`\.txt$`), source: rofs}
 	_, err := fs.Create("/file.txt")
 	if err == nil {
@@ -27,7 +27,7 @@ func TestFilterROChain(t *testing.T) {
 }
 
 func TestFilterReadDir(t *testing.T) {
-	mfs := &memmapfs.MemMapFs{}
+	mfs := &memmapfs.Fs{}
 	fs1 := &Fs{re: regexp.MustCompile(`\.txt$`), source: mfs}
 	fs := &Fs{re: regexp.MustCompile(`^a`), source: fs1}
 

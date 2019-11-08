@@ -20,7 +20,7 @@ import (
 
 var tempDirs []string
 
-func NewTempOsBaseFs(t *testing.T) *basepathfs.BasePathFs {
+func NewTempOsBaseFs(t *testing.T) *basepathfs.Fs {
 	name, err := fsutil.TempDir(osfs.NewOsFs(), "", "")
 	if err != nil {
 		t.Error("error creating tempDir", err)
@@ -28,7 +28,7 @@ func NewTempOsBaseFs(t *testing.T) *basepathfs.BasePathFs {
 
 	tempDirs = append(tempDirs, name)
 
-	return basepathfs.NewBasePathFs(osfs.NewOsFs(), name)
+	return basepathfs.New(osfs.NewOsFs(), name)
 }
 
 func CleanupTempDirs(t *testing.T) {
@@ -58,9 +58,9 @@ func CleanupTempDirs(t *testing.T) {
 }
 
 func TestUnionCreateExisting(t *testing.T) {
-	base := &MemMapFs{}
-	roBase := rofs.NewReadOnlyFs(base)
-	ufs := cowfs.NewCopyOnWriteFs(roBase, &MemMapFs{})
+	base := &Fs{}
+	roBase := rofs.New(base)
+	ufs := cowfs.New(roBase, &Fs{})
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -106,10 +106,10 @@ func TestUnionCreateExisting(t *testing.T) {
 }
 
 func TestUnionMergeReaddir(t *testing.T) {
-	base := &MemMapFs{}
-	roBase := rofs.NewReadOnlyFs(base)
+	base := &Fs{}
+	roBase := rofs.New(base)
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, &MemMapFs{})
+	ufs := cowfs.New(roBase, &Fs{})
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -131,11 +131,11 @@ func TestUnionMergeReaddir(t *testing.T) {
 }
 
 func TestExistingDirectoryCollisionReaddir(t *testing.T) {
-	base := &MemMapFs{}
-	roBase := rofs.NewReadOnlyFs(base)
-	overlay := &MemMapFs{}
+	base := &Fs{}
+	roBase := rofs.New(base)
+	overlay := &Fs{}
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
+	ufs := cowfs.New(roBase, overlay)
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -171,11 +171,11 @@ func TestExistingDirectoryCollisionReaddir(t *testing.T) {
 }
 
 func TestNestedDirBaseReaddir(t *testing.T) {
-	base := &MemMapFs{}
-	roBase := rofs.NewReadOnlyFs(base)
-	overlay := &MemMapFs{}
+	base := &Fs{}
+	roBase := rofs.New(base)
+	overlay := &Fs{}
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
+	ufs := cowfs.New(roBase, overlay)
 
 	base.MkdirAll("/home/test/foo/bar", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -206,11 +206,11 @@ func TestNestedDirBaseReaddir(t *testing.T) {
 }
 
 func TestNestedDirOverlayReaddir(t *testing.T) {
-	base := &MemMapFs{}
-	roBase := rofs.NewReadOnlyFs(base)
-	overlay := &MemMapFs{}
+	base := &Fs{}
+	roBase := rofs.New(base)
+	overlay := &Fs{}
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
+	ufs := cowfs.New(roBase, overlay)
 
 	base.MkdirAll("/", 0777)
 	overlay.MkdirAll("/home/test/foo/bar", 0777)
@@ -241,10 +241,10 @@ func TestNestedDirOverlayReaddir(t *testing.T) {
 func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 	defer CleanupTempDirs(t)
 	base := NewTempOsBaseFs(t)
-	roBase := rofs.NewReadOnlyFs(base)
+	roBase := rofs.New(base)
 	overlay := NewTempOsBaseFs(t)
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
+	ufs := cowfs.New(roBase, overlay)
 
 	base.MkdirAll("/", 0777)
 	overlay.MkdirAll("/home/test/foo/bar", 0777)
@@ -276,10 +276,10 @@ func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 func TestCopyOnWriteFsWithOsFs(t *testing.T) {
 	defer CleanupTempDirs(t)
 	base := NewTempOsBaseFs(t)
-	roBase := rofs.NewReadOnlyFs(base)
+	roBase := rofs.New(base)
 	overlay := NewTempOsBaseFs(t)
 
-	ufs := cowfs.NewCopyOnWriteFs(roBase, overlay)
+	ufs := cowfs.New(roBase, overlay)
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -317,10 +317,10 @@ func TestCopyOnWriteFsWithOsFs(t *testing.T) {
 }
 
 func TestUnionCacheWrite(t *testing.T) {
-	base := &MemMapFs{}
-	layer := &MemMapFs{}
+	base := &Fs{}
+	layer := &Fs{}
 
-	ufs := cacheonreadfs.NewCacheOnReadFs(base, layer, 0)
+	ufs := cacheonreadfs.New(base, layer, 0)
 
 	base.Mkdir("/data", 0777)
 
@@ -347,9 +347,9 @@ func TestUnionCacheWrite(t *testing.T) {
 }
 
 func TestUnionCacheExpire(t *testing.T) {
-	base := &MemMapFs{}
-	layer := &MemMapFs{}
-	ufs := cacheonreadfs.NewCacheOnReadFs(base, layer, 1*time.Second)
+	base := &Fs{}
+	layer := &Fs{}
+	ufs := cacheonreadfs.New(base, layer, 1*time.Second)
 
 	base.Mkdir("/data", 0777)
 
@@ -376,9 +376,9 @@ func TestUnionCacheExpire(t *testing.T) {
 }
 
 func TestCacheOnReadFsNotInLayer(t *testing.T) {
-	base := NewMemMapFs()
-	layer := NewMemMapFs()
-	fs := cacheonreadfs.NewCacheOnReadFs(base, layer, 0)
+	base := New()
+	layer := New()
+	fs := cacheonreadfs.New(base, layer, 0)
 
 	fh, err := base.Create("/file.txt")
 	if err != nil {
@@ -414,10 +414,10 @@ func TestCacheOnReadFsNotInLayer(t *testing.T) {
 func TestUnionFileReaddirEmpty(t *testing.T) {
 	osFs := osfs.NewOsFs()
 
-	base := NewMemMapFs()
-	overlay := NewMemMapFs()
-	ufs := cowfs.NewCopyOnWriteFs(base, overlay)
-	mem := NewMemMapFs()
+	base := New()
+	overlay := New()
+	ufs := cowfs.New(base, overlay)
+	mem := New()
 
 	// The OS file will return io.EOF on end of directory.
 	for _, fs := range []afero.Fs{osFs, ufs, mem} {
@@ -448,20 +448,20 @@ func TestUnionFileReaddirEmpty(t *testing.T) {
 
 // #197
 func TestUnionFileReaddirDuplicateEmpty(t *testing.T) {
-	base := NewMemMapFs()
+	base := New()
 	dir, err := fsutil.TempDir(base, "", "empty-dir")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Overlay shares same empty directory as base
-	overlay := NewMemMapFs()
+	overlay := New()
 	err = overlay.Mkdir(dir, 0700)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ufs := cowfs.NewCopyOnWriteFs(base, overlay)
+	ufs := cowfs.New(base, overlay)
 
 	f, err := ufs.Open(dir)
 	if err != nil {
@@ -481,14 +481,14 @@ func TestUnionFileReaddirDuplicateEmpty(t *testing.T) {
 }
 
 func TestUnionFileReaddirAskForTooMany(t *testing.T) {
-	base := &MemMapFs{}
-	overlay := &MemMapFs{}
+	base := &Fs{}
+	overlay := &Fs{}
 
 	for i := 0; i < 5; i++ {
 		fsutil.WriteFile(base, fmt.Sprintf("file%d.txt", i), []byte("afero"), 0777)
 	}
 
-	ufs := cowfs.NewCopyOnWriteFs(base, overlay)
+	ufs := cowfs.New(base, overlay)
 
 	f, err := ufs.Open("")
 	if err != nil {

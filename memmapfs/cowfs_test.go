@@ -20,7 +20,7 @@ func TestCopyOnWrite(t *testing.T) {
 	}
 	defer osFs.RemoveAll(writeDir)
 
-	compositeFs := cowfs.NewCopyOnWriteFs(rofs.NewReadOnlyFs(osfs.NewOsFs()), osFs)
+	compositeFs := cowfs.New(rofs.New(osfs.NewOsFs()), osFs)
 
 	dir := filepath.Join(writeDir, "some/path")
 
@@ -52,14 +52,14 @@ func TestCopyOnWrite(t *testing.T) {
 }
 
 func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
-	base := &MemMapFs{}
-	layer := &MemMapFs{}
+	base := &Fs{}
+	layer := &Fs{}
 
 	if err := fsutil.WriteFile(base, "base.txt", []byte("base"), 0755); err != nil {
 		t.Fatalf("Failed to write file: %s", err)
 	}
 
-	ufs := cowfs.NewCopyOnWriteFs(base, layer)
+	ufs := cowfs.New(base, layer)
 
 	_, err := ufs.Stat("base.txt")
 	if err != nil {

@@ -46,14 +46,14 @@ func TestLstatIfPossible(t *testing.T) {
 
 	memWorkDir := "/lstate"
 
-	memFs := NewMemMapFs()
-	overlayFs1 := cowfs.NewCopyOnWriteFs(osFs, memFs)
-	overlayFs2 := cowfs.NewCopyOnWriteFs(memFs, osFs)
-	overlayFsMemOnly := cowfs.NewCopyOnWriteFs(memFs, NewMemMapFs())
-	basePathFs := basepathfs.NewBasePathFs(osFs, workDir)
-	basePathFsMem := basepathfs.NewBasePathFs(memFs, memWorkDir)
-	roFs := rofs.NewReadOnlyFs(osFs)
-	roFsMem := rofs.NewReadOnlyFs(memFs)
+	memFs := New()
+	overlayFs1 := cowfs.New(osFs, memFs)
+	overlayFs2 := cowfs.New(memFs, osFs)
+	overlayFsMemOnly := cowfs.New(memFs, New())
+	basePathFs := basepathfs.New(osFs, workDir)
+	basePathFsMem := basepathfs.New(memFs, memWorkDir)
+	roFs := rofs.New(osFs)
+	roFsMem := rofs.New(memFs)
 
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 

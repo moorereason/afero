@@ -13,9 +13,9 @@ import (
 )
 
 func TestBasePath(t *testing.T) {
-	baseFs := &MemMapFs{}
+	baseFs := &Fs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.New(baseFs, "/base/path")
 
 	if _, err := bp.Create("/tmp/foo"); err != nil {
 		t.Errorf("Failed to set real path")
@@ -27,10 +27,10 @@ func TestBasePath(t *testing.T) {
 }
 
 func TestBasePathRoot(t *testing.T) {
-	baseFs := &MemMapFs{}
+	baseFs := &Fs{}
 	baseFs.MkdirAll("/base/path/foo/baz", 0777)
 	baseFs.MkdirAll("/base/path/boo/", 0777)
-	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.New(baseFs, "/base/path")
 
 	rd, err := fsutil.ReadDir(bp, string(os.PathSeparator))
 
@@ -56,7 +56,7 @@ func TestRealPath(t *testing.T) {
 	}
 	defer fs.RemoveAll(anotherDir)
 
-	bp := basepathfs.NewBasePathFs(fs, baseDir)
+	bp := basepathfs.New(fs, baseDir)
 
 	subDir := filepath.Join(baseDir, "s1")
 
@@ -105,10 +105,10 @@ func TestNestedBasePaths(t *testing.T) {
 	}
 
 	for _, ds := range dirSpecs {
-		memFs := NewMemMapFs()
-		level1Fs := basepathfs.NewBasePathFs(memFs, ds.Dir1)
-		level2Fs := basepathfs.NewBasePathFs(level1Fs, ds.Dir2)
-		level3Fs := basepathfs.NewBasePathFs(level2Fs, ds.Dir3)
+		memFs := New()
+		level1Fs := basepathfs.New(memFs, ds.Dir1)
+		level2Fs := basepathfs.New(level1Fs, ds.Dir2)
+		level3Fs := basepathfs.New(level2Fs, ds.Dir3)
 
 		type spec struct {
 			BaseFs   afero.Fs
@@ -144,9 +144,9 @@ func TestNestedBasePaths(t *testing.T) {
 }
 
 func TestBasePathOpenFile(t *testing.T) {
-	baseFs := &MemMapFs{}
+	baseFs := &Fs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.New(baseFs, "/base/path")
 	f, err := bp.OpenFile("/tmp/file.txt", os.O_CREATE, 0600)
 	if err != nil {
 		t.Fatalf("failed to open file: %v", err)
@@ -157,9 +157,9 @@ func TestBasePathOpenFile(t *testing.T) {
 }
 
 func TestBasePathCreate(t *testing.T) {
-	baseFs := &MemMapFs{}
+	baseFs := &Fs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.New(baseFs, "/base/path")
 	f, err := bp.Create("/tmp/file.txt")
 	if err != nil {
 		t.Fatalf("failed to create file: %v", err)
@@ -170,9 +170,9 @@ func TestBasePathCreate(t *testing.T) {
 }
 
 func TestBasePathTempFile(t *testing.T) {
-	baseFs := &MemMapFs{}
+	baseFs := &Fs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := basepathfs.NewBasePathFs(baseFs, "/base/path")
+	bp := basepathfs.New(baseFs, "/base/path")
 
 	tDir, err := fsutil.TempDir(bp, "/tmp", "")
 	if err != nil {

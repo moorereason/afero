@@ -9,37 +9,37 @@ import (
 	"github.com/spf13/afero/fsutil"
 )
 
-var _ afero.Lstater = (*ReadOnlyFs)(nil)
+var _ afero.Lstater = (*Fs)(nil)
 
-type ReadOnlyFs struct {
+type Fs struct {
 	source afero.Fs
 }
 
-func NewReadOnlyFs(source afero.Fs) *ReadOnlyFs {
-	return &ReadOnlyFs{source: source}
+func New(source afero.Fs) *Fs {
+	return &Fs{source: source}
 }
 
-func (r *ReadOnlyFs) ReadDir(name string) ([]os.FileInfo, error) {
+func (r *Fs) ReadDir(name string) ([]os.FileInfo, error) {
 	return fsutil.ReadDir(r.source, name)
 }
 
-func (r *ReadOnlyFs) Chtimes(n string, a, m time.Time) error {
+func (r *Fs) Chtimes(n string, a, m time.Time) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) Chmod(n string, m os.FileMode) error {
+func (r *Fs) Chmod(n string, m os.FileMode) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) Name() string {
-	return "ReadOnlyFilter"
+func (r *Fs) Name() string {
+	return "rofs"
 }
 
-func (r *ReadOnlyFs) Stat(name string) (os.FileInfo, error) {
+func (r *Fs) Stat(name string) (os.FileInfo, error) {
 	return r.source.Stat(name)
 }
 
-func (r *ReadOnlyFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
+func (r *Fs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	if lsf, ok := r.source.(afero.Lstater); ok {
 		return lsf.LstatIfPossible(name)
 	}
@@ -47,37 +47,37 @@ func (r *ReadOnlyFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, false, err
 }
 
-func (r *ReadOnlyFs) Rename(o, n string) error {
+func (r *Fs) Rename(o, n string) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) RemoveAll(p string) error {
+func (r *Fs) RemoveAll(p string) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) Remove(n string) error {
+func (r *Fs) Remove(n string) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+func (r *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	if flag&(os.O_WRONLY|syscall.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
 		return nil, syscall.EPERM
 	}
 	return r.source.OpenFile(name, flag, perm)
 }
 
-func (r *ReadOnlyFs) Open(n string) (afero.File, error) {
+func (r *Fs) Open(n string) (afero.File, error) {
 	return r.source.Open(n)
 }
 
-func (r *ReadOnlyFs) Mkdir(n string, p os.FileMode) error {
+func (r *Fs) Mkdir(n string, p os.FileMode) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) MkdirAll(n string, p os.FileMode) error {
+func (r *Fs) MkdirAll(n string, p os.FileMode) error {
 	return syscall.EPERM
 }
 
-func (r *ReadOnlyFs) Create(n string) (afero.File, error) {
+func (r *Fs) Create(n string) (afero.File, error) {
 	return nil, syscall.EPERM
 }

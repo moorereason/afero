@@ -38,20 +38,20 @@ func TestNormalizePath(t *testing.T) {
 func TestPathErrors(t *testing.T) {
 	path := filepath.Join(".", "some", "path")
 	path2 := filepath.Join(".", "different", "path")
-	fs := NewMemMapFs()
+	fs := New()
 	perm := os.FileMode(0755)
 
 	// relevant functions:
-	// func (m *MemMapFs) Chmod(name string, mode os.FileMode) error
-	// func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error
-	// func (m *MemMapFs) Create(name string) (File, error)
-	// func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error
-	// func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error
-	// func (m *MemMapFs) Open(name string) (File, error)
-	// func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error)
-	// func (m *MemMapFs) Remove(name string) error
-	// func (m *MemMapFs) Rename(oldname, newname string) error
-	// func (m *MemMapFs) Stat(name string) (os.FileInfo, error)
+	// func (m *Fs) Chmod(name string, mode os.FileMode) error
+	// func (m *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error
+	// func (m *Fs) Create(name string) (File, error)
+	// func (m *Fs) Mkdir(name string, perm os.FileMode) error
+	// func (m *Fs) MkdirAll(path string, perm os.FileMode) error
+	// func (m *Fs) Open(name string) (File, error)
+	// func (m *Fs) OpenFile(name string, flag int, perm os.FileMode) (File, error)
+	// func (m *Fs) Remove(name string) error
+	// func (m *Fs) Rename(oldname, newname string) error
+	// func (m *Fs) Stat(name string) (os.FileInfo, error)
 
 	err := fs.Chmod(path, perm)
 	checkPathError(t, err, "Chmod")
@@ -116,7 +116,7 @@ func TestPermSet(t *testing.T) {
 	// directories will also have the directory bit set
 	const dirMode = fileMode | os.ModeDir
 
-	fs := NewMemMapFs()
+	fs := New()
 
 	// Test Openfile
 	f, err := fs.OpenFile(fileName, os.O_CREATE, fileMode)
@@ -170,7 +170,7 @@ func TestPermSet(t *testing.T) {
 	}
 }
 
-// Fails if multiple file objects use the same file.at counter in MemMapFs
+// Fails if multiple file objects use the same file.at counter in Fs
 func TestMultipleOpenFiles(t *testing.T) {
 	defer removeAllTestFiles(t)
 	const fileName = "afero-demo2.txt"
@@ -331,7 +331,7 @@ func TestWriteCloseTime(t *testing.T) {
 // This test should be run with the race detector on:
 // go test -race -v -timeout 10s -run TestRacingDeleteAndClose
 func TestRacingDeleteAndClose(t *testing.T) {
-	fs := NewMemMapFs()
+	fs := New()
 	pathname := "testfile"
 	f, err := fs.Create(pathname)
 	if err != nil {
@@ -355,7 +355,7 @@ func TestRacingDeleteAndClose(t *testing.T) {
 // go test -run TestMemFsDataRace -race
 func TestMemFsDataRace(t *testing.T) {
 	const dir = "test_dir"
-	fs := NewMemMapFs()
+	fs := New()
 
 	if err := fs.MkdirAll(dir, 0777); err != nil {
 		t.Fatal(err)
@@ -392,7 +392,7 @@ loop:
 }
 
 func TestMemFsDirMode(t *testing.T) {
-	fs := NewMemMapFs()
+	fs := New()
 	err := fs.Mkdir("/testDir1", 0644)
 	if err != nil {
 		t.Error(err)
@@ -426,7 +426,7 @@ func TestMemFsDirMode(t *testing.T) {
 func TestMemFsUnexpectedEOF(t *testing.T) {
 	t.Parallel()
 
-	fs := NewMemMapFs()
+	fs := New()
 
 	if err := fsutil.WriteFile(fs, "file.txt", []byte("abc"), 0777); err != nil {
 		t.Fatal(err)

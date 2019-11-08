@@ -33,7 +33,7 @@ func checkSizePath(t *testing.T, path string, size int64) {
 // planned to be removed in v2.
 
 // func TestReadFile(t *testing.T) {
-// 	testFS = &MemMapFs{}
+// 	testFS = &Fs{}
 // 	fs := &afero.Afero{Fs: testFS}
 //
 // 	testFS.Create("this_exists.go")
@@ -53,7 +53,7 @@ func checkSizePath(t *testing.T, path string, size int64) {
 // }
 //
 // func TestWriteFile(t *testing.T) {
-// 	testFS = &MemMapFs{}
+// 	testFS = &Fs{}
 // 	fs := &afero.Afero{Fs: testFS}
 // 	f, err := fs.TempFile("", "ioutil-test")
 // 	if err != nil {
@@ -83,7 +83,7 @@ func checkSizePath(t *testing.T, path string, size int64) {
 // }
 //
 // func TestReadDir(t *testing.T) {
-// 	testFS = &MemMapFs{}
+// 	testFS = &Fs{}
 // 	testFS.Mkdir("/i-am-a-dir", 0777)
 // 	testFS.Create("/this_exists.go")
 // 	dirname := "rumpelstilzchen"

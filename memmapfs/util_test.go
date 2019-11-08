@@ -31,7 +31,7 @@ import (
 	"github.com/spf13/afero/fsutil"
 )
 
-var testFS = new(MemMapFs)
+var testFS = new(Fs)
 
 func TestDirExists(t *testing.T) {
 	type test struct {
@@ -40,7 +40,7 @@ func TestDirExists(t *testing.T) {
 	}
 
 	// First create a couple directories so there is something in the filesystem
-	// testFS := new(MemMapFs)
+	// testFS := new(Fs)
 	testFS.MkdirAll("/foo/bar", 0777)
 
 	data := []test{
@@ -70,7 +70,7 @@ func TestDirExists(t *testing.T) {
 }
 
 func TestIsDir(t *testing.T) {
-	testFS = new(MemMapFs)
+	testFS = new(Fs)
 
 	type test struct {
 		input    string
@@ -93,7 +93,7 @@ func TestIsDir(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	testFS = new(MemMapFs)
+	testFS = new(Fs)
 
 	zeroSizedFile, _ := createZeroSizedFileInTempDir()
 	defer deleteFileInTempDir(zeroSizedFile)
@@ -379,25 +379,25 @@ func TestWriteToDisk(t *testing.T) {
 func TestGetTempDir(t *testing.T) {
 	dir := os.TempDir()
 	if fsutil.FilePathSeparator != dir[len(dir)-1:] {
-		dir = dir + fsutil.FilePathSeparator
+		dir = dir + FilePathSeparator
 	}
-	testDir := "hugoTestFolder" + fsutil.FilePathSeparator
+	testDir := "hugoTestFolder" + FilePathSeparator
 	tests := []struct {
 		input    string
 		expected string
 	}{
 		{"", dir},
-		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + fsutil.FilePathSeparator},
-		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + fsutil.FilePathSeparator},
-		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + fsutil.FilePathSeparator},
-		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + fsutil.FilePathSeparator},
-		{testDir + "трям/трям", dir + testDir + "трям/трям" + fsutil.FilePathSeparator},
+		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + FilePathSeparator},
+		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + FilePathSeparator},
+		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + FilePathSeparator},
+		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + FilePathSeparator},
+		{testDir + "трям/трям", dir + testDir + "трям/трям" + FilePathSeparator},
 		{testDir + "은행", dir + testDir + "은행" + fsutil.FilePathSeparator},
-		{testDir + "Банковский кассир", dir + testDir + "Банковский кассир" + fsutil.FilePathSeparator},
+		{testDir + "Банковский кассир", dir + testDir + "Банковский кассир" + FilePathSeparator},
 	}
 
 	for _, test := range tests {
-		output := fsutil.GetTempDir(new(MemMapFs), test.input)
+		output := fsutil.GetTempDir(new(Fs), test.input)
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}
@@ -424,10 +424,10 @@ func TestFullBaseFsPath(t *testing.T) {
 	}
 
 	for _, ds := range dirSpecs {
-		memFs := NewMemMapFs()
-		level1Fs := basepathfs.NewBasePathFs(memFs, ds.Dir1)
-		level2Fs := basepathfs.NewBasePathFs(level1Fs, ds.Dir2)
-		level3Fs := basepathfs.NewBasePathFs(level2Fs, ds.Dir3)
+		memFs := New()
+		level1Fs := basepathfs.New(memFs, ds.Dir1)
+		level2Fs := basepathfs.New(level1Fs, ds.Dir2)
+		level3Fs := basepathfs.New(level2Fs, ds.Dir3)
 
 		type spec struct {
 			BaseFs       afero.Fs
@@ -444,7 +444,7 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath := basepathfs.FullBaseFsPath(s.BaseFs.(*basepathfs.BasePathFs), s.FileName); actualPath != s.ExpectedPath {
+			if actualPath := basepathfs.FullBaseFsPath(s.BaseFs.(*basepathfs.Fs), s.FileName); actualPath != s.ExpectedPath {
 				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
 			}
 		}

@@ -7,8 +7,8 @@ import (
 )
 
 func TestFilterReadOnly(t *testing.T) {
-	mfs := &MemMapFs{}
-	fs := rofs.NewReadOnlyFs(mfs)
+	mfs := &Fs{}
+	fs := rofs.New(mfs)
 	_, err := fs.Create("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to create file")
@@ -17,12 +17,12 @@ func TestFilterReadOnly(t *testing.T) {
 }
 
 func TestFilterReadonlyRemoveAndRead(t *testing.T) {
-	mfs := &MemMapFs{}
+	mfs := &Fs{}
 	fh, err := mfs.Create("/file.txt")
 	fh.Write([]byte("content here"))
 	fh.Close()
 
-	fs := rofs.NewReadOnlyFs(mfs)
+	fs := rofs.New(mfs)
 	err = fs.Remove("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to remove file")
