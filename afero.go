@@ -29,10 +29,6 @@ import (
 	"time"
 )
 
-type Afero struct {
-	Fs
-}
-
 // File represents a file in the filesystem.
 type File interface {
 	io.Closer
