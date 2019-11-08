@@ -272,7 +272,7 @@ func (u *CopyOnWriteFs) Mkdir(name string, perm os.FileMode) error {
 		return u.layer.MkdirAll(name, perm)
 	}
 	if dir {
-		return afero.ErrFileExists
+		return os.ErrExist
 	}
 	return u.layer.MkdirAll(name, perm)
 }

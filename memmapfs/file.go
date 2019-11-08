@@ -23,6 +23,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/spf13/afero"
 )
 
 type File struct {
@@ -171,7 +173,7 @@ func (f *File) Read(b []byte) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	if f.closed == true {
-		return 0, ErrFileClosed
+		return 0, os.ErrClosed
 	}
 	if len(b) > 0 && int(f.at) == len(f.fileData.data) {
 		return 0, io.EOF
@@ -196,13 +198,13 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 
 func (f *File) Truncate(size int64) error {
 	if f.closed == true {
-		return ErrFileClosed
+		return os.ErrClosed
 	}
 	if f.readOnly {
 		return &os.PathError{Op: "truncate", Path: f.fileData.name, Err: errors.New("file handle is read only")}
 	}
 	if size < 0 {
-		return ErrOutOfRange
+		return afero.ErrOutOfRange
 	}
 	if size > int64(len(f.fileData.data)) {
 		diff := size - int64(len(f.fileData.data))
@@ -216,7 +218,7 @@ func (f *File) Truncate(size int64) error {
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed == true {
-		return 0, ErrFileClosed
+		return 0, os.ErrClosed
 	}
 	switch whence {
 	case 0:
@@ -306,12 +308,3 @@ func (s *FileInfo) Size() int64 {
 	defer s.Unlock()
 	return int64(len(s.data))
 }
-
-var (
-	ErrFileClosed        = errors.New("File is closed")
-	ErrOutOfRange        = errors.New("Out of range")
-	ErrTooLarge          = errors.New("Too large")
-	ErrFileNotFound      = os.ErrNotExist
-	ErrFileExists        = os.ErrExist
-	ErrDestinationExists = os.ErrExist
-)
