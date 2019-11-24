@@ -430,7 +430,7 @@ func TestFullBaseFsPath(t *testing.T) {
 		level3Fs := basepathfs.New(level2Fs, ds.Dir3)
 
 		type spec struct {
-			BaseFs       afero.Fs
+			BaseFs       *basepathfs.Fs
 			FileName     string
 			ExpectedPath string
 		}
@@ -444,7 +444,7 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath := basepathfs.FullBaseFsPath(s.BaseFs.(*basepathfs.Fs), s.FileName); actualPath != s.ExpectedPath {
+			if actualPath := s.BaseFs.FullPath(s.FileName); actualPath != s.ExpectedPath {
 				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
 			}
 		}

@@ -179,10 +179,10 @@ func (b *Fs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, false, err
 }
 
-func FullBaseFsPath(basePathFs *Fs, relativePath string) string {
-	combinedPath := filepath.Join(basePathFs.path, relativePath)
-	if parent, ok := basePathFs.source.(*Fs); ok {
-		return FullBaseFsPath(parent, combinedPath)
+func (b *Fs) FullPath(relativePath string) string {
+	combinedPath := filepath.Join(b.path, relativePath)
+	if parent, ok := b.source.(*Fs); ok {
+		return parent.FullPath(combinedPath)
 	}
 
 	return combinedPath
