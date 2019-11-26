@@ -23,13 +23,10 @@
 package afero
 
 import (
-	"errors"
 	"io"
 	"os"
 	"time"
 )
-
-var ErrOutOfRange = errors.New("Out of range")
 
 // File represents a file in the filesystem.
 type File interface {
@@ -104,3 +101,12 @@ type Fs interface {
 type Lstater interface {
 	LstatIfPossible(name string) (os.FileInfo, bool, error)
 }
+
+// aferoError implements errors.Error
+type aferoError string
+
+func (e aferoError) Error() string {
+	return string(e)
+}
+
+const ErrOutOfRange = aferoError("Out of range")
